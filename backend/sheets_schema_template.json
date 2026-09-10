@@ -1,0 +1,194 @@
+{
+  "version": "1.0.0",
+  "tournament_name": "Juegos Magisteriales 2026",
+  "description": "Plantilla de esquema y datos iniciales para el Google Spreadsheet de gestión de torneos deportivos.",
+  "sheets": [
+    {
+      "name": "USUARIOS_ADMIN",
+      "description": "Credenciales y roles administrativos. NUNCA se expone en consultas públicas.",
+      "columns": [
+        { "name": "id_usuario", "type": "String", "description": "Identificador único" },
+        { "name": "nombre", "type": "String", "description": "Nombre para mostrar" },
+        { "name": "usuario", "type": "String", "description": "Login / Nombre de usuario" },
+        { "name": "pin_hash", "type": "String", "description": "Hash SHA-256 del PIN numérico" },
+        { "name": "rol", "type": "String", "description": "SUPER_ADMIN o MESA_CONTROL" },
+        { "name": "estado", "type": "String", "description": "ACTIVO o BLOQUEADO" }
+      ],
+      "sample_rows": [
+        {
+          "id_usuario": "USR-001",
+          "nombre": "Director de Torneo",
+          "usuario": "admin_magisterial",
+          "pin_hash": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+          "pin_plain_comment": "PIN por defecto: 1234",
+          "rol": "SUPER_ADMIN",
+          "estado": "ACTIVO"
+        },
+        {
+          "id_usuario": "USR-002",
+          "nombre": "Mesa Cancha Principal",
+          "usuario": "mesa_cancha1",
+          "pin_hash": "9af15b336e6a9619928537df30b2e6a2376569fcf9d7e773eccede65606529a0",
+          "pin_plain_comment": "PIN por defecto: 0000",
+          "rol": "MESA_CONTROL",
+          "estado": "ACTIVO"
+        },
+        {
+          "id_usuario": "USR-003",
+          "nombre": "Mesa Cancha Sintética",
+          "usuario": "mesa_cancha2",
+          "pin_hash": "9af15b336e6a9619928537df30b2e6a2376569fcf9d7e773eccede65606529a0",
+          "pin_plain_comment": "PIN por defecto: 0000",
+          "rol": "MESA_CONTROL",
+          "estado": "ACTIVO"
+        }
+      ]
+    },
+    {
+      "name": "CONFIG_EVENTO",
+      "description": "Parámetros globales del torneo y sincronización del reloj de cuenta regresiva.",
+      "columns": [
+        { "name": "parametro", "type": "String", "description": "Clave de configuración" },
+        { "name": "valor", "type": "String", "description": "Valor asignado" },
+        { "name": "descripcion", "type": "String", "description": "Explicación del parámetro" }
+      ],
+      "sample_rows": [
+        { "parametro": "nombre_evento", "valor": "Juegos Magisteriales 2026", "descripcion": "Nombre visual oficial del torneo" },
+        { "parametro": "disciplina", "valor": "FUTBOL", "descripcion": "Disciplina deportiva activa" },
+        { "parametro": "countdown_target", "valor": "2026-10-15T09:00:00Z", "descripcion": "Fecha/hora ISO del próximo evento o inauguración" },
+        { "parametro": "countdown_title", "valor": "Inauguración y Partido Inicial", "descripcion": "Título del contador para el portal web" },
+        { "parametro": "fase_actual", "valor": "GRUPOS", "descripcion": "Fase actual: GRUPOS, CUARTOS, SEMIFINAL, FINAL" },
+        { "parametro": "clasificados_por_grupo", "valor": "2", "descripcion": "Equipos por grupo que clasifican a eliminación directa" },
+        { "parametro": "organizador_nombre", "valor": "Comité Organizador Magisterial 2026", "descripcion": "Nombre del organizador / comité" },
+        { "parametro": "organizador_logo_url", "valor": "", "descripcion": "URL pública del logo del organizador" },
+        { "parametro": "banner_bg_url", "valor": "", "descripcion": "URL de imagen de fondo personalizada (opcional)" }
+      ]
+    },
+    {
+      "name": "EQUIPOS_FUTBOL",
+      "description": "Registro de equipos, grupos y tabla de posiciones con cálculo de goles y puntos.",
+      "columns": [
+        { "name": "id_equipo", "type": "String", "description": "Identificador único (ej: EQP-01)" },
+        { "name": "nombre", "type": "String", "description": "Nombre del equipo / delegación" },
+        { "name": "grupo", "type": "String", "description": "Grupo asignado (A, B, C, D)" },
+        { "name": "color_hex", "type": "String", "description": "Color representativo en hexadecimal" },
+        { "name": "logo_url", "type": "String", "description": "URL pública del escudo/logo en Google Drive (lh3.googleusercontent.com)" },
+        { "name": "pj", "type": "Number", "description": "Partidos Jugados" },
+        { "name": "pg", "type": "Number", "description": "Partidos Ganados" },
+        { "name": "pe", "type": "Number", "description": "Partidos Empatados" },
+        { "name": "pp", "type": "Number", "description": "Partidos Perdidos" },
+        { "name": "gf", "type": "Number", "description": "Goles a Favor" },
+        { "name": "gc", "type": "Number", "description": "Goles en Contra" },
+        { "name": "dg", "type": "Formula", "description": "Diferencia de Gol", "formula": "=J{row}-K{row}" },
+        { "name": "puntos", "type": "Formula", "description": "Puntos totales (3 por PG + 1 por PE)", "formula": "=(G{row}*3)+(H{row}*1)" }
+      ],
+      "sample_rows": [
+        { "id_equipo": "EQP-01", "nombre": "Magisterio Cusco", "grupo": "A", "color_hex": "#DC2626", "logo_url": "", "pj": 2, "pg": 2, "pe": 0, "pp": 0, "gf": 5, "gc": 1, "dg": 4, "puntos": 6 },
+        { "id_equipo": "EQP-02", "nombre": "Docentes Arequipa", "grupo": "A", "color_hex": "#2563EB", "logo_url": "", "pj": 2, "pg": 1, "pe": 0, "pp": 1, "gf": 3, "gc": 2, "dg": 1, "puntos": 3 },
+        { "id_equipo": "EQP-03", "nombre": "Educadores Puno", "grupo": "A", "color_hex": "#16A34A", "logo_url": "", "pj": 2, "pg": 0, "pe": 1, "pp": 1, "gf": 2, "gc": 4, "dg": -2, "puntos": 1 },
+        { "id_equipo": "EQP-04", "nombre": "Colegio Abancay", "grupo": "A", "color_hex": "#CA8A04", "logo_url": "", "pj": 2, "pg": 0, "pe": 1, "pp": 1, "gf": 1, "gc": 4, "dg": -3, "puntos": 1 },
+        { "id_equipo": "EQP-05", "nombre": "Pedagógico Lima", "grupo": "B", "color_hex": "#9333EA", "logo_url": "", "pj": 2, "pg": 1, "pe": 1, "pp": 0, "gf": 4, "gc": 2, "dg": 2, "puntos": 4 },
+        { "id_equipo": "EQP-06", "nombre": "I.E. Trujillo Norte", "grupo": "B", "color_hex": "#0D9488", "logo_url": "", "pj": 2, "pg": 1, "pe": 1, "pp": 0, "gf": 3, "gc": 1, "dg": 2, "puntos": 4 },
+        { "id_equipo": "EQP-07", "nombre": "Profesores Piura", "grupo": "B", "color_hex": "#EA580C", "logo_url": "", "pj": 2, "pg": 0, "pe": 1, "pp": 1, "gf": 1, "gc": 2, "dg": -1, "puntos": 1 },
+        { "id_equipo": "EQP-08", "nombre": "Magisterio Huancayo", "grupo": "B", "color_hex": "#4F46E5", "logo_url": "", "pj": 2, "pg": 0, "pe": 1, "pp": 1, "gf": 0, "gc": 3, "dg": -3, "puntos": 1 }
+      ]
+    },
+    {
+      "name": "PARTIDOS_FUTBOL",
+      "description": "Fixture completo de partidos, programación, canchas, marcadores y estados en vivo.",
+      "columns": [
+        { "name": "id_partido", "type": "String", "description": "Identificador único (ej: MAT-01)" },
+        { "name": "fase", "type": "String", "description": "Fase o Grupo (ej: Grupo A, Grupo B, Cuartos, Semifinal, Final)" },
+        { "name": "fecha_hora", "type": "String", "description": "Fecha y hora en formato ISO 8601" },
+        { "name": "cancha", "type": "String", "description": "Nombre o número de cancha" },
+        { "name": "local_id", "type": "String", "description": "ID del equipo local" },
+        { "name": "visita_id", "type": "String", "description": "ID del equipo visitante" },
+        { "name": "goles_local", "type": "Number", "description": "Goles anotados por el local" },
+        { "name": "goles_visita", "type": "Number", "description": "Goles anotados por el visitante" },
+        { "name": "penales_local", "type": "Number", "description": "Penales del local (fase de eliminación)" },
+        { "name": "penales_visita", "type": "Number", "description": "Penales del visitante (fase de eliminación)" },
+        { "name": "estado", "type": "String", "description": "PROGRAMADO, EN_VIVO, ENTRETIEMPO, FINALIZADO" },
+        { "name": "arbitro_asignado", "type": "String", "description": "Nombre del árbitro o responsable" }
+      ],
+      "sample_rows": [
+        {
+          "id_partido": "MAT-01",
+          "fase": "Grupo A",
+          "fecha_hora": "2026-10-15T09:00:00Z",
+          "cancha": "Cancha 1 (Principal)",
+          "local_id": "EQP-01",
+          "visita_id": "EQP-02",
+          "goles_local": 2,
+          "goles_visita": 1,
+          "penales_local": 0,
+          "penales_visita": 0,
+          "estado": "FINALIZADO",
+          "arbitro_asignado": "Carlos Morales"
+        },
+        {
+          "id_partido": "MAT-02",
+          "fase": "Grupo A",
+          "fecha_hora": "2026-10-15T10:30:00Z",
+          "cancha": "Cancha 2",
+          "local_id": "EQP-03",
+          "visita_id": "EQP-04",
+          "goles_local": 1,
+          "goles_visita": 1,
+          "penales_local": 0,
+          "penales_visita": 0,
+          "estado": "FINALIZADO",
+          "arbitro_asignado": "Luis Rojas"
+        },
+        {
+          "id_partido": "MAT-03",
+          "fase": "Grupo B",
+          "fecha_hora": "2026-10-15T12:00:00Z",
+          "cancha": "Cancha 1 (Principal)",
+          "local_id": "EQP-05",
+          "visita_id": "EQP-06",
+          "goles_local": 2,
+          "goles_visita": 1,
+          "penales_local": 0,
+          "penales_visita": 0,
+          "estado": "EN_VIVO",
+          "arbitro_asignado": "Miguel Ángel Soto"
+        },
+        {
+          "id_partido": "MAT-04",
+          "fase": "Grupo B",
+          "fecha_hora": "2026-10-15T13:30:00Z",
+          "cancha": "Cancha 2",
+          "local_id": "EQP-07",
+          "visita_id": "EQP-08",
+          "goles_local": 0,
+          "goles_visita": 0,
+          "penales_local": 0,
+          "penales_visita": 0,
+          "estado": "PROGRAMADO",
+          "arbitro_asignado": "Carlos Morales"
+        }
+      ]
+    },
+    {
+      "name": "BRACKET_FUTBOL",
+      "description": "Estructura en árbol de las llaves de eliminación directa (Playoffs).",
+      "columns": [
+        { "name": "cruce_id", "type": "String", "description": "Identificador del cruce (ej: CRU-C1, CRU-S1, CRU-FIN)" },
+        { "name": "ronda", "type": "String", "description": "Cuartos, Semifinal, Final" },
+        { "name": "equipo_1_id", "type": "String", "description": "ID del primer equipo (o marcador 1ro Grupo A)" },
+        { "name": "equipo_2_id", "type": "String", "description": "ID del segundo equipo (o marcador 2do Grupo B)" },
+        { "name": "ganador_id", "type": "String", "description": "ID del equipo clasificado/ganador" },
+        { "name": "siguiente_cruce_id", "type": "String", "description": "ID del cruce al que avanza el ganador" }
+      ],
+      "sample_rows": [
+        { "cruce_id": "CRU-C1", "ronda": "Cuartos", "equipo_1_id": "EQP-01", "equipo_2_id": "EQP-06", "ganador_id": "EQP-01", "siguiente_cruce_id": "CRU-S1" },
+        { "cruce_id": "CRU-C2", "ronda": "Cuartos", "equipo_1_id": "EQP-05", "equipo_2_id": "EQP-02", "ganador_id": "", "siguiente_cruce_id": "CRU-S1" },
+        { "cruce_id": "CRU-C3", "ronda": "Cuartos", "equipo_1_id": "EQP-03", "equipo_2_id": "EQP-08", "ganador_id": "", "siguiente_cruce_id": "CRU-S2" },
+        { "cruce_id": "CRU-C4", "ronda": "Cuartos", "equipo_1_id": "EQP-07", "equipo_2_id": "EQP-04", "ganador_id": "", "siguiente_cruce_id": "CRU-S2" },
+        { "cruce_id": "CRU-S1", "ronda": "Semifinal", "equipo_1_id": "EQP-01", "equipo_2_id": "", "ganador_id": "", "siguiente_cruce_id": "CRU-FIN" },
+        { "cruce_id": "CRU-S2", "ronda": "Semifinal", "equipo_1_id": "", "equipo_2_id": "", "ganador_id": "", "siguiente_cruce_id": "CRU-FIN" },
+        { "cruce_id": "CRU-FIN", "ronda": "Final", "equipo_1_id": "", "equipo_2_id": "", "ganador_id": "", "siguiente_cruce_id": "" }
+      ]
+    }
+  ]
+}

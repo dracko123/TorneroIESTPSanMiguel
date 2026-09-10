@@ -1,0 +1,50 @@
+# ==========================================
+# GITIGNORE - SISTEMA DEPORTIVO FÚTBOL
+# ==========================================
+
+# Archivos del Sistema Operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.bak
+
+# Entornos de Desarrollo (IDEs)
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Dependencias y Compilación Web (Node / Vite / React)
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Flutter / Dart / Aplicación Móvil
+.dart_tool/
+**/.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+**/build/
+.widget_preview/
+**/ios/Flutter/.last_build_id
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+
+# Archivos Binarios Pesados y Empaquetados
+*.apk
+*.aab
+*.exe
+*.dll
