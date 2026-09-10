@@ -44,6 +44,7 @@ export function App() {
         {/* Sección de Tabla de Posiciones por Grupos */}
         <GroupStandings
           teams={data.teams || []}
+          config={data.config}
           qualifiersPerGroup={
             data.config?.clasificados_por_grupo !== undefined &&
             data.config?.clasificados_por_grupo !== null &&

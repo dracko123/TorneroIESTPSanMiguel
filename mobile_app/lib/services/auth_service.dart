@@ -17,6 +17,7 @@ class AuthService extends ChangeNotifier {
   bool get isSuperAdmin => _currentUser?.isSuperAdmin ?? false;
   bool get isMesaControl => _currentUser?.isMesaControl ?? false;
   bool get isLoading => _isLoading;
+  String? getToken() => _currentUser?.token;
 
   static const String keyUserSession = 'user_session_json';
 

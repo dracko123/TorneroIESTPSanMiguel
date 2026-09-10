@@ -28,6 +28,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
   const isLive = match.estado === 'EN_VIVO';
   const isHalftime = match.estado === 'ENTRETIEMPO';
   const isFinished = match.estado === 'FINALIZADO';
+  const isWalkover = match.walkover && match.walkover !== 'NO';
 
   const formattedDate = match.fecha_hora ? new Date(match.fecha_hora).toLocaleDateString('es-ES', {
     weekday: 'short',
@@ -53,30 +54,38 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
           {match.fase || 'Fase Regular'}
         </span>
 
-        {isLive && (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[11px] font-black uppercase tracking-wider">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-            EN VIVO
-          </span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {isWalkover && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 text-[10px] font-black uppercase tracking-wider">
+              W.O.
+            </span>
+          )}
 
-        {isHalftime && (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold uppercase tracking-wider">
-            ENTRETIEMPO
-          </span>
-        )}
+          {isLive && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[11px] font-black uppercase tracking-wider">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              EN VIVO
+            </span>
+          )}
 
-        {isFinished && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-white/5 text-[11px] font-medium">
-            FINALIZADO
-          </span>
-        )}
+          {isHalftime && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold uppercase tracking-wider">
+              ENTRETIEMPO
+            </span>
+          )}
 
-        {match.estado === 'PROGRAMADO' && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20 text-[11px] font-medium">
-            PROGRAMADO
-          </span>
-        )}
+          {isFinished && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-white/5 text-[11px] font-medium">
+              FINALIZADO
+            </span>
+          )}
+
+          {match.estado === 'PROGRAMADO' && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20 text-[11px] font-medium">
+              PROGRAMADO
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Duelo de equipos y Marcador central */}
@@ -121,6 +130,14 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
               {hasPenalties && (
                 <div className="mt-1 text-[10px] sm:text-xs text-amber-400 font-bold font-scoreboard tracking-wide">
                   Pen: ({match.penales_local}) - ({match.penales_visita})
+                </div>
+              )}
+
+              {isWalkover && (
+                <div className="mt-1 text-[10px] text-rose-400 font-bold uppercase tracking-wider text-center">
+                  {match.walkover === 'DOBLE'
+                    ? 'Doble W.O.'
+                    : (match.walkover === 'LOCAL' ? 'Gana Local W.O.' : 'Gana Visita W.O.')}
                 </div>
               )}
             </div>

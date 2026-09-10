@@ -5,6 +5,7 @@ import '../models/match_model.dart';
 import '../models/team_model.dart';
 import '../models/tournament_config_model.dart';
 import '../models/bracket_model.dart';
+import '../models/user_model.dart';
 
 class ApiResponse<T> {
   final bool success;
@@ -146,6 +147,7 @@ class ApiService {
     int penalesLocal = 0,
     int penalesVisita = 0,
     required String estado,
+    String? walkover,
   }) async {
     try {
       final baseUrl = await ApiEndpoints.getApiUrl();
@@ -162,6 +164,7 @@ class ApiService {
         'penalesLocal': penalesLocal,
         'penalesVisita': penalesVisita,
         'estado': estado,
+        if (walkover != null && walkover.isNotEmpty) 'walkover': walkover,
       };
 
       final response = await _postAppsScript(uri, bodyMap);
@@ -391,6 +394,107 @@ class ApiService {
         return ApiResponse(success: true, data: data['message'] ?? 'Partidos guardados exitosamente');
       } else {
         return ApiResponse(success: false, error: data['error'] ?? 'Error al guardar partidos');
+      }
+    } catch (e) {
+      return ApiResponse(success: false, error: 'Error de red: $e');
+    }
+  }
+
+  /// POST ?action=getUsers
+  /// Retorna lista de usuarios administradores y mesas de control
+  Future<ApiResponse<List<UserModel>>> getUsers({required String token}) async {
+    try {
+      final baseUrl = await ApiEndpoints.getApiUrl();
+      final sheetId = await ApiEndpoints.getSheetId();
+
+      final uri = Uri.parse(baseUrl);
+      final bodyMap = {
+        'action': 'getUsers',
+        'sheetId': sheetId,
+        'token': token,
+      };
+
+      final response = await _postAppsScript(uri, bodyMap);
+      final data = json.decode(response.body);
+
+      if (data['success'] == true) {
+        final List listRaw = data['users'] ?? [];
+        final users = listRaw.map((u) => UserModel.fromUserListJson(u)).toList();
+        return ApiResponse(success: true, data: users);
+      } else {
+        return ApiResponse(success: false, error: data['error'] ?? 'Error al obtener usuarios');
+      }
+    } catch (e) {
+      return ApiResponse(success: false, error: 'Error de red: $e');
+    }
+  }
+
+  /// POST ?action=saveUser
+  /// Crea o actualiza un usuario de mesa de control o administrador
+  Future<ApiResponse<String>> saveUser({
+    required String token,
+    String? idUsuario,
+    required String nombre,
+    required String usuario,
+    String? pin,
+    String rol = 'MESA_CONTROL',
+    String estado = 'ACTIVO',
+  }) async {
+    try {
+      final baseUrl = await ApiEndpoints.getApiUrl();
+      final sheetId = await ApiEndpoints.getSheetId();
+
+      final uri = Uri.parse(baseUrl);
+      final bodyMap = {
+        'action': 'saveUser',
+        'sheetId': sheetId,
+        'token': token,
+        if (idUsuario != null && idUsuario.isNotEmpty) 'id_usuario': idUsuario,
+        'nombre': nombre,
+        'usuario': usuario,
+        if (pin != null && pin.isNotEmpty) 'pin': pin,
+        'rol': rol,
+        'estado': estado,
+      };
+
+      final response = await _postAppsScript(uri, bodyMap);
+      final data = json.decode(response.body);
+
+      if (data['success'] == true) {
+        return ApiResponse(success: true, data: data['message'] ?? 'Usuario guardado exitosamente');
+      } else {
+        return ApiResponse(success: false, error: data['error'] ?? 'Error al guardar usuario');
+      }
+    } catch (e) {
+      return ApiResponse(success: false, error: 'Error de red: $e');
+    }
+  }
+
+  /// POST ?action=deleteUser
+  /// Elimina un usuario de la lista
+  Future<ApiResponse<String>> deleteUser({
+    required String token,
+    required String idUsuario,
+  }) async {
+    try {
+      final baseUrl = await ApiEndpoints.getApiUrl();
+      final sheetId = await ApiEndpoints.getSheetId();
+
+      final uri = Uri.parse(baseUrl);
+      final bodyMap = {
+        'action': 'deleteUser',
+        'sheetId': sheetId,
+        'token': token,
+        'id_usuario': idUsuario,
+      };
+
+      final response = await _postAppsScript(uri, bodyMap);
+      final data = json.decode(response.body);
+
+      if (data['success'] == true) {
+        return ApiResponse(success: true, data: data['message'] ?? 'Usuario eliminado');
+      } else {
+        return ApiResponse(success: false, error: data['error'] ?? 'Error al eliminar usuario');
       }
     } catch (e) {
       return ApiResponse(success: false, error: 'Error de red: $e');

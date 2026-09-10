@@ -1,16 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import type { Team } from '../types/tournament';
+import type { Team, TournamentConfig } from '../types/tournament';
 import { TeamBadge } from './TeamBadge';
 import { Trophy, CheckCircle2, Info } from 'lucide-react';
 
 interface GroupStandingsProps {
   teams: Team[];
   qualifiersPerGroup?: number;
+  config?: TournamentConfig;
 }
 
 export const GroupStandings: React.FC<GroupStandingsProps> = ({
   teams,
-  qualifiersPerGroup = 2
+  qualifiersPerGroup = 2,
+  config
 }) => {
   // Obtener lista única de grupos ordenados (A, B, C...)
   const groups = useMemo(() => {
@@ -212,8 +214,15 @@ export const GroupStandings: React.FC<GroupStandingsProps> = ({
           )}
 
           <div className="flex items-center gap-1.5 text-slate-500">
-            <Info className="w-3.5 h-3.5" />
-            <span>Sistema: 3 pts por Victoria, 1 pt por Empate, 0 pts por Derrota</span>
+            <Info className="w-3.5 h-3.5 shrink-0" />
+            <span>
+              Puntajes: {config?.puntos_victoria ?? 3} pts Victoria (W.O: {config?.puntos_victoria_wo ?? 3} pts),{' '}
+              {config?.puntos_empate ?? 1} pt Empate,{' '}
+              {config?.puntos_derrota ?? 0} pts Derrota
+              {config?.puntos_derrota_wo !== undefined && config.puntos_derrota_wo !== 0
+                ? ` | Sanción no presentación W.O: ${config.puntos_derrota_wo} pts`
+                : ''}
+            </span>
           </div>
         </div>
       </div>

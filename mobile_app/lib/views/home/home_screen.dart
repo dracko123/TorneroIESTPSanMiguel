@@ -10,6 +10,7 @@ import '../live/live_control_screen.dart';
 import '../fixtures/fixtures_screen.dart';
 import '../admin/teams_management_screen.dart';
 import '../admin/tournament_config_screen.dart';
+import '../admin/users_management_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -150,6 +151,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          if (isSuperAdmin)
+            IconButton(
+              icon: const Icon(Icons.manage_accounts, color: Colors.purpleAccent),
+              tooltip: 'Mesas de Control y Usuarios',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const UsersManagementScreen()),
+                );
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.refresh, color: AppTheme.turfGreen),
             tooltip: 'Sincronizar con Google Sheets',

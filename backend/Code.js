@@ -128,6 +128,15 @@ function doPost(e) {
       case 'setupSheets':
         return handleSetupSheets(ss, sheetId, payload);
 
+      case 'getUsers':
+        return handleGetUsers(ss, payload);
+
+      case 'saveUser':
+        return handleSaveUser(ss, payload);
+
+      case 'deleteUser':
+        return handleDeleteUser(ss, payload);
+
       default:
         return createJsonResponse({
           success: false,
@@ -268,6 +277,7 @@ function handleLogin(ss, payload) {
 /**
  * POST action=updateScore
  * Actualiza marcador en vivo, penales y estado. Recalcula tabla de posiciones.
+ * Valida que si el usuario es MESA_CONTROL solo pueda editar partidos asignados a él.
  */
 function handleUpdateScore(ss, sheetId, payload) {
   const auth = verifyAuthToken(payload.token);
@@ -276,11 +286,12 @@ function handleUpdateScore(ss, sheetId, payload) {
   }
 
   const partidoId = payload.partidoId;
-  const golesLocal = payload.golesLocal !== undefined ? Number(payload.golesLocal) : null;
-  const golesVisita = payload.golesVisita !== undefined ? Number(payload.golesVisita) : null;
-  const penalesLocal = payload.penalesLocal !== undefined ? Number(payload.penalesLocal) : 0;
-  const penalesVisita = payload.penalesVisita !== undefined ? Number(payload.penalesVisita) : 0;
-  const estado = payload.estado ? payload.estado.toString().toUpperCase() : null; // PROGRAMADO, EN_VIVO, ENTRETIEMPO, FINALIZADO
+  let golesLocal = payload.golesLocal !== undefined && payload.golesLocal !== null ? Number(payload.golesLocal) : null;
+  let golesVisita = payload.golesVisita !== undefined && payload.golesVisita !== null ? Number(payload.golesVisita) : null;
+  const penalesLocal = payload.penalesLocal !== undefined && payload.penalesLocal !== null ? Number(payload.penalesLocal) : 0;
+  const penalesVisita = payload.penalesVisita !== undefined && payload.penalesVisita !== null ? Number(payload.penalesVisita) : 0;
+  let estado = payload.estado ? payload.estado.toString().toUpperCase() : null; // PROGRAMADO, EN_VIVO, ENTRETIEMPO, FINALIZADO
+  const walkoverParam = payload.walkover ? payload.walkover.toString().toUpperCase().trim() : null; // NO, LOCAL, VISITA, DOBLE
 
   if (!partidoId) {
     return createJsonResponse({ success: false, error: 'partidoId es requerido' }, 400);
@@ -306,6 +317,7 @@ function handleUpdateScore(ss, sheetId, payload) {
   const colFase = headers.indexOf('fase');
   const colLocal = headers.indexOf('local_id');
   const colVisita = headers.indexOf('visita_id');
+  const colArbitro = headers.indexOf('arbitro_asignado');
 
   let rowIndex = -1;
   for (let i = 1; i < data.length; i++) {
@@ -317,6 +329,57 @@ function handleUpdateScore(ss, sheetId, payload) {
 
   if (rowIndex === -1) {
     return createJsonResponse({ success: false, error: 'Partido no encontrado con ID: ' + partidoId }, 404);
+  }
+
+  // VALIDACIÓN DE SEGURIDAD POR ROL: MESA_CONTROL solo puede editar partidos asignados a él
+  if (auth.user.rol === 'MESA_CONTROL') {
+    const matchArbitro = (colArbitro !== -1 && data[rowIndex - 1][colArbitro]) ? data[rowIndex - 1][colArbitro].toString().trim().toLowerCase() : '';
+    const userNom = (auth.user.nom || '').toString().trim().toLowerCase();
+    const userUsr = (auth.user.usr || '').toString().trim().toLowerCase();
+    const uid = (auth.user.uid || '').toString().trim().toLowerCase();
+
+    const isAssigned = matchArbitro && (
+      matchArbitro === userNom || 
+      matchArbitro === userUsr || 
+      matchArbitro === uid
+    );
+
+    if (!isAssigned) {
+      return createJsonResponse({
+        success: false,
+        error: 'Acceso denegado: Este partido está asignado a otra mesa de control o árbitro.'
+      }, 403);
+    }
+  }
+
+  // Garantizar columna 'walkover' en PARTIDOS_FUTBOL
+  let colWalkover = headers.indexOf('walkover');
+  if (colWalkover === -1) {
+    colWalkover = headers.length;
+    sheet.getRange(1, colWalkover + 1).setValue('walkover');
+    headers.push('walkover');
+  }
+
+  // GESTIÓN DE WALKOVER (W.O.)
+  if (walkoverParam && walkoverParam !== 'NO') {
+    const configObj = readConfigSheet(ss);
+    const gWoFavor = configObj.goles_wo_favor !== undefined ? Number(configObj.goles_wo_favor) : 3;
+    const gWoContra = configObj.goles_wo_contra !== undefined ? Number(configObj.goles_wo_contra) : 0;
+
+    if (walkoverParam === 'LOCAL') {
+      golesLocal = gWoFavor;
+      golesVisita = gWoContra;
+    } else if (walkoverParam === 'VISITA') {
+      golesLocal = gWoContra;
+      golesVisita = gWoFavor;
+    } else if (walkoverParam === 'DOBLE') {
+      golesLocal = 0;
+      golesVisita = 0;
+    }
+    estado = 'FINALIZADO';
+    sheet.getRange(rowIndex, colWalkover + 1).setValue(walkoverParam);
+  } else if (walkoverParam === 'NO') {
+    sheet.getRange(rowIndex, colWalkover + 1).setValue('NO');
   }
 
   // Actualizar valores en la fila
@@ -365,7 +428,8 @@ function handleUpdateScore(ss, sheetId, payload) {
   return createJsonResponse({
     success: true,
     message: 'Marcador y estadísticas actualizadas exitosamente',
-    partidoId: partidoId
+    partidoId: partidoId,
+    walkover: walkoverParam || 'NO'
   });
 }
 
@@ -395,7 +459,14 @@ function handleSaveTournamentConfig(ss, sheetId, payload) {
     'clasificados_por_grupo',
     'organizador_nombre',
     'organizador_logo_url',
-    'banner_bg_url'
+    'banner_bg_url',
+    'puntos_victoria',
+    'puntos_empate',
+    'puntos_derrota',
+    'puntos_victoria_wo',
+    'puntos_derrota_wo',
+    'goles_wo_favor',
+    'goles_wo_contra'
   ];
 
   // Mapear filas existentes por parámetro
@@ -423,6 +494,8 @@ function handleSaveTournamentConfig(ss, sheetId, payload) {
     }
   });
 
+  SpreadsheetApp.flush();
+  recalculateStandings(ss);
   SpreadsheetApp.flush();
   invalidateTournamentCache(sheetId);
 
@@ -960,6 +1033,13 @@ function handleSetupSheets(ss, sheetId, payload) {
     sheetConfig.appendRow(['organizador_nombre', 'Comité Organizador Magisterial 2026', 'Nombre del organizador oficial']);
     sheetConfig.appendRow(['organizador_logo_url', '', 'URL del logo del organizador']);
     sheetConfig.appendRow(['banner_bg_url', '', 'URL de imagen de fondo del hero banner']);
+    sheetConfig.appendRow(['puntos_victoria', '3', 'Puntos otorgados por victoria jugada']);
+    sheetConfig.appendRow(['puntos_empate', '1', 'Puntos otorgados por empate']);
+    sheetConfig.appendRow(['puntos_derrota', '0', 'Puntos otorgados por derrota jugada']);
+    sheetConfig.appendRow(['puntos_victoria_wo', '3', 'Puntos otorgados al ganador de Walkover']);
+    sheetConfig.appendRow(['puntos_derrota_wo', '-1', 'Puntos otorgados o sanción al perdedor de Walkover']);
+    sheetConfig.appendRow(['goles_wo_favor', '3', 'Goles otorgados al ganador de Walkover']);
+    sheetConfig.appendRow(['goles_wo_contra', '0', 'Goles otorgados al perdedor de Walkover']);
     formatHeaderRow(sheetConfig);
   }
 
@@ -979,8 +1059,7 @@ function handleSetupSheets(ss, sheetId, payload) {
       ['EQP-08', 'Magisterio Huancayo', 'B', '#4F46E5', '']
     ];
     sampleTeams.forEach((t, idx) => {
-      const r = idx + 2;
-      sheetTeams.appendRow([...t, 0, 0, 0, 0, 0, 0, '=J' + r + '-K' + r, '=(G' + r + '*3)+(H' + r + '*1)']);
+      sheetTeams.appendRow([...t, 0, 0, 0, 0, 0, 0, 0, 0]);
     });
     formatHeaderRow(sheetTeams);
   }
@@ -991,12 +1070,12 @@ function handleSetupSheets(ss, sheetId, payload) {
     sheetMatches = ss.insertSheet(CONFIG.SHEET_NAMES.MATCHES);
     sheetMatches.appendRow([
       'id_partido', 'fase', 'fecha_hora', 'cancha', 'local_id', 'visita_id',
-      'goles_local', 'goles_visita', 'penales_local', 'penales_visita', 'estado', 'arbitro_asignado'
+      'goles_local', 'goles_visita', 'penales_local', 'penales_visita', 'estado', 'arbitro_asignado', 'walkover'
     ]);
-    sheetMatches.appendRow(['MAT-01', 'Grupo A', '2026-10-15T09:00:00Z', 'Cancha 1', 'EQP-01', 'EQP-02', 0, 0, 0, 0, 'PROGRAMADO', 'Carlos Morales']);
-    sheetMatches.appendRow(['MAT-02', 'Grupo A', '2026-10-15T10:30:00Z', 'Cancha 2', 'EQP-03', 'EQP-04', 0, 0, 0, 0, 'PROGRAMADO', 'Luis Rojas']);
-    sheetMatches.appendRow(['MAT-03', 'Grupo B', '2026-10-15T12:00:00Z', 'Cancha 1', 'EQP-05', 'EQP-06', 0, 0, 0, 0, 'PROGRAMADO', 'Miguel Soto']);
-    sheetMatches.appendRow(['MAT-04', 'Grupo B', '2026-10-15T13:30:00Z', 'Cancha 2', 'EQP-07', 'EQP-08', 0, 0, 0, 0, 'PROGRAMADO', 'Carlos Morales']);
+    sheetMatches.appendRow(['MAT-01', 'Grupo A', '2026-10-15T09:00:00Z', 'Cancha 1', 'EQP-01', 'EQP-02', 0, 0, 0, 0, 'PROGRAMADO', 'Carlos Morales', 'NO']);
+    sheetMatches.appendRow(['MAT-02', 'Grupo A', '2026-10-15T10:30:00Z', 'Cancha 2', 'EQP-03', 'EQP-04', 0, 0, 0, 0, 'PROGRAMADO', 'Luis Rojas', 'NO']);
+    sheetMatches.appendRow(['MAT-03', 'Grupo B', '2026-10-15T12:00:00Z', 'Cancha 1', 'EQP-05', 'EQP-06', 0, 0, 0, 0, 'PROGRAMADO', 'Mesa de Control Principal', 'NO']);
+    sheetMatches.appendRow(['MAT-04', 'Grupo B', '2026-10-15T13:30:00Z', 'Cancha 2', 'EQP-07', 'EQP-08', 0, 0, 0, 0, 'PROGRAMADO', 'Carlos Morales', 'NO']);
     formatHeaderRow(sheetMatches);
   }
 
@@ -1024,12 +1103,206 @@ function handleSetupSheets(ss, sheetId, payload) {
   });
 }
 
+/**
+ * POST action=getUsers
+ * Retorna la lista de usuarios administradores y mesas de control.
+ * Solo SUPER_ADMIN puede consultar esta lista.
+ */
+function handleGetUsers(ss, payload) {
+  const auth = verifyAuthToken(payload.token, 'SUPER_ADMIN');
+  if (!auth.valid) {
+    return createJsonResponse({ success: false, error: auth.error }, 403);
+  }
+
+  const users = readSheetAsObjects(ss, CONFIG.SHEET_NAMES.USERS);
+  // Omitir pin_hash por privacidad y seguridad
+  const sanitizedUsers = users.map(u => ({
+    id_usuario: u.id_usuario,
+    nombre: u.nombre || '',
+    usuario: u.usuario || '',
+    rol: u.rol || 'MESA_CONTROL',
+    estado: u.estado || 'ACTIVO'
+  }));
+
+  return createJsonResponse({
+    success: true,
+    users: sanitizedUsers
+  });
+}
+
+/**
+ * POST action=saveUser
+ * Crea o actualiza un usuario de administración o mesa de control.
+ * Solo SUPER_ADMIN puede ejecutar esta acción.
+ */
+function handleSaveUser(ss, payload) {
+  const auth = verifyAuthToken(payload.token, 'SUPER_ADMIN');
+  if (!auth.valid) {
+    return createJsonResponse({ success: false, error: auth.error }, 403);
+  }
+
+  const sheet = ss.getSheetByName(CONFIG.SHEET_NAMES.USERS);
+  if (!sheet) {
+    return createJsonResponse({ success: false, error: 'Hoja USUARIOS_ADMIN no encontrada' }, 404);
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(h => h.toString().trim());
+  const colId = headers.indexOf('id_usuario');
+  const colNombre = headers.indexOf('nombre');
+  const colUsuario = headers.indexOf('usuario');
+  const colPinHash = headers.indexOf('pin_hash');
+  const colRol = headers.indexOf('rol');
+  const colEstado = headers.indexOf('estado');
+
+  const idUsuario = (payload.id_usuario || '').toString().trim();
+  const nombre = (payload.nombre || '').toString().trim();
+  const usuario = (payload.usuario || '').toString().trim().toLowerCase();
+  const pin = (payload.pin !== undefined && payload.pin !== null) ? payload.pin.toString().trim() : '';
+  const rol = (payload.rol || 'MESA_CONTROL').toString().toUpperCase();
+  const estado = (payload.estado || 'ACTIVO').toString().toUpperCase();
+
+  if (!nombre || !usuario) {
+    return createJsonResponse({ success: false, error: 'Nombre y usuario son campos obligatorios' }, 400);
+  }
+
+  if (rol !== 'SUPER_ADMIN' && rol !== 'MESA_CONTROL') {
+    return createJsonResponse({ success: false, error: 'Rol inválido. Debe ser SUPER_ADMIN o MESA_CONTROL' }, 400);
+  }
+
+  let rowIndex = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (idUsuario && data[i][colId] && data[i][colId].toString() === idUsuario) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+
+  // Verificar que el 'usuario' no esté duplicado en otra fila
+  for (let i = 1; i < data.length; i++) {
+    const existingUser = (data[i][colUsuario] || '').toString().trim().toLowerCase();
+    const isDifferentRow = rowIndex !== (i + 1);
+    if (existingUser === usuario && isDifferentRow) {
+      return createJsonResponse({ success: false, error: 'El nombre de usuario ya está registrado por otra cuenta' }, 409);
+    }
+  }
+
+  if (rowIndex !== -1) {
+    // Actualizar usuario existente
+    if (colNombre !== -1) sheet.getRange(rowIndex, colNombre + 1).setValue(nombre);
+    if (colUsuario !== -1) sheet.getRange(rowIndex, colUsuario + 1).setValue(usuario);
+    if (colRol !== -1) sheet.getRange(rowIndex, colRol + 1).setValue(rol);
+    if (colEstado !== -1) sheet.getRange(rowIndex, colEstado + 1).setValue(estado);
+    if (pin && colPinHash !== -1) {
+      sheet.getRange(rowIndex, colPinHash + 1).setValue(computeSHA256(pin));
+    }
+    SpreadsheetApp.flush();
+    return createJsonResponse({
+      success: true,
+      message: 'Usuario actualizado exitosamente',
+      id_usuario: idUsuario
+    });
+  } else {
+    // Crear nuevo usuario
+    if (!pin) {
+      return createJsonResponse({ success: false, error: 'El PIN numérico es obligatorio para crear un usuario nuevo' }, 400);
+    }
+    const newId = idUsuario || ('USR-' + ('00' + data.length).slice(-3));
+    const newRow = [];
+    headers.forEach(h => {
+      switch (h) {
+        case 'id_usuario': newRow.push(newId); break;
+        case 'nombre': newRow.push(nombre); break;
+        case 'usuario': newRow.push(usuario); break;
+        case 'pin_hash': newRow.push(computeSHA256(pin)); break;
+        case 'rol': newRow.push(rol); break;
+        case 'estado': newRow.push(estado); break;
+        default: newRow.push(''); break;
+      }
+    });
+    sheet.appendRow(newRow);
+    SpreadsheetApp.flush();
+    return createJsonResponse({
+      success: true,
+      message: 'Usuario creado exitosamente',
+      id_usuario: newId
+    });
+  }
+}
+
+/**
+ * POST action=deleteUser
+ * Elimina un usuario de la lista.
+ * Protege contra la eliminación del propio usuario o del último SUPER_ADMIN.
+ */
+function handleDeleteUser(ss, payload) {
+  const auth = verifyAuthToken(payload.token, 'SUPER_ADMIN');
+  if (!auth.valid) {
+    return createJsonResponse({ success: false, error: auth.error }, 403);
+  }
+
+  const idUsuario = (payload.id_usuario || '').toString().trim();
+  if (!idUsuario) {
+    return createJsonResponse({ success: false, error: 'id_usuario es requerido' }, 400);
+  }
+
+  // Prevenir auto-eliminación
+  if (auth.user.uid === idUsuario) {
+    return createJsonResponse({ success: false, error: 'No puedes eliminar tu propia cuenta de administrador' }, 400);
+  }
+
+  const sheet = ss.getSheetByName(CONFIG.SHEET_NAMES.USERS);
+  if (!sheet) {
+    return createJsonResponse({ success: false, error: 'Hoja USUARIOS_ADMIN no encontrada' }, 404);
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(h => h.toString().trim());
+  const colId = headers.indexOf('id_usuario');
+  const colRol = headers.indexOf('rol');
+
+  let rowIndex = -1;
+  let targetRol = '';
+  let superAdminCount = 0;
+
+  for (let i = 1; i < data.length; i++) {
+    const rowId = (data[i][colId] || '').toString();
+    const rowRol = (data[i][colRol] || '').toString();
+    if (rowRol === 'SUPER_ADMIN') {
+      superAdminCount++;
+    }
+    if (rowId === idUsuario) {
+      rowIndex = i + 1;
+      targetRol = rowRol;
+    }
+  }
+
+  if (rowIndex === -1) {
+    return createJsonResponse({ success: false, error: 'Usuario no encontrado' }, 404);
+  }
+
+  if (targetRol === 'SUPER_ADMIN' && superAdminCount <= 1) {
+    return createJsonResponse({ success: false, error: 'No se puede eliminar el único SUPER_ADMIN del sistema' }, 400);
+  }
+
+  sheet.deleteRow(rowIndex);
+  SpreadsheetApp.flush();
+
+  return createJsonResponse({
+    success: true,
+    message: 'Usuario eliminado exitosamente',
+    id_usuario: idUsuario
+  });
+}
+
 // ============================================================================
 // LÓGICA DE NEGOCIO DE FÚTBOL (TABLA DE POSICIONES Y BRACKETS)
 // ============================================================================
 
 /**
- * Recalcula la tabla de posiciones en EQUIPOS_FUTBOL a partir de los partidos finalizados
+ * Recalcula la tabla de posiciones en EQUIPOS_FUTBOL a partir de los partidos finalizados.
+ * Admite reglas personalizadas de puntuación (puntos_victoria, puntos_empate, puntos_derrota,
+ * puntos_victoria_wo, puntos_derrota_wo) y penalización con resta efectiva de puntos.
  */
 function recalculateStandings(ss) {
   const sheetTeams = ss.getSheetByName(CONFIG.SHEET_NAMES.TEAMS);
@@ -1041,6 +1314,14 @@ function recalculateStandings(ss) {
 
   if (teamsData.length < 2 || matchesData.length < 2) return;
 
+  // Leer configuración de puntuación
+  const config = readConfigSheet(ss);
+  const ptsVictoria = config.puntos_victoria !== undefined && config.puntos_victoria !== '' ? Number(config.puntos_victoria) : 3;
+  const ptsEmpate = config.puntos_empate !== undefined && config.puntos_empate !== '' ? Number(config.puntos_empate) : 1;
+  const ptsDerrota = config.puntos_derrota !== undefined && config.puntos_derrota !== '' ? Number(config.puntos_derrota) : 0;
+  const ptsVictoriaWo = config.puntos_victoria_wo !== undefined && config.puntos_victoria_wo !== '' ? Number(config.puntos_victoria_wo) : 3;
+  const ptsDerrotaWo = config.puntos_derrota_wo !== undefined && config.puntos_derrota_wo !== '' ? Number(config.puntos_derrota_wo) : -1;
+
   const teamHeaders = teamsData[0].map(h => h.toString().trim());
   const colTeamId = teamHeaders.indexOf('id_equipo');
 
@@ -1051,13 +1332,14 @@ function recalculateStandings(ss) {
   const colGolesLocal = matchHeaders.indexOf('goles_local');
   const colGolesVisita = matchHeaders.indexOf('goles_visita');
   const colEstado = matchHeaders.indexOf('estado');
+  const colWalkover = matchHeaders.indexOf('walkover');
 
   // Inicializar acumuladores por equipo
   const stats = {};
   for (let i = 1; i < teamsData.length; i++) {
     const id = teamsData[i][colTeamId];
     if (id) {
-      stats[id] = { pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0 };
+      stats[id] = { pj: 0, pg: 0, pe: 0, pp: 0, pg_wo: 0, pp_wo: 0, gf: 0, gc: 0 };
     }
   }
 
@@ -1066,6 +1348,7 @@ function recalculateStandings(ss) {
     const row = matchesData[m];
     const estado = (row[colEstado] || '').toString().toUpperCase();
     const fase = (row[colFase] || '').toString().toUpperCase();
+    const walkover = (colWalkover !== -1 && row[colWalkover]) ? row[colWalkover].toString().toUpperCase().trim() : 'NO';
 
     // Solo computar partidos finalizados que pertenezcan a la fase regular o de grupos
     if (estado === 'FINALIZADO' && (fase.includes('GRUPO') || fase.includes('REGULAR'))) {
@@ -1082,15 +1365,30 @@ function recalculateStandings(ss) {
         stats[idVisita].gf += gv;
         stats[idVisita].gc += gl;
 
-        if (gl > gv) {
-          stats[idLocal].pg += 1;
-          stats[idVisita].pp += 1;
-        } else if (gl < gv) {
-          stats[idVisita].pg += 1;
-          stats[idLocal].pp += 1;
+        if (walkover === 'LOCAL') {
+          // Gana local por W.O.
+          stats[idLocal].pg_wo += 1;
+          stats[idVisita].pp_wo += 1;
+        } else if (walkover === 'VISITA') {
+          // Gana visita por W.O.
+          stats[idVisita].pg_wo += 1;
+          stats[idLocal].pp_wo += 1;
+        } else if (walkover === 'DOBLE') {
+          // Ambos pierden por W.O.
+          stats[idLocal].pp_wo += 1;
+          stats[idVisita].pp_wo += 1;
         } else {
-          stats[idLocal].pe += 1;
-          stats[idVisita].pe += 1;
+          // Partido jugado normal
+          if (gl > gv) {
+            stats[idLocal].pg += 1;
+            stats[idVisita].pp += 1;
+          } else if (gl < gv) {
+            stats[idVisita].pg += 1;
+            stats[idLocal].pp += 1;
+          } else {
+            stats[idLocal].pe += 1;
+            stats[idVisita].pe += 1;
+          }
         }
       }
     }
@@ -1103,18 +1401,31 @@ function recalculateStandings(ss) {
   const colPp = teamHeaders.indexOf('pp');
   const colGf = teamHeaders.indexOf('gf');
   const colGc = teamHeaders.indexOf('gc');
+  const colDg = teamHeaders.indexOf('dg');
+  const colPuntos = teamHeaders.indexOf('puntos');
 
   for (let i = 1; i < teamsData.length; i++) {
     const id = teamsData[i][colTeamId];
     if (id && stats[id]) {
       const rowIndex = i + 1;
       const s = stats[id];
+      const totalPg = s.pg + s.pg_wo;
+      const totalPp = s.pp + s.pp_wo;
+      const dg = s.gf - s.gc;
+      const totalPuntos = (s.pg * ptsVictoria) + 
+                          (s.pg_wo * ptsVictoriaWo) + 
+                          (s.pe * ptsEmpate) + 
+                          (s.pp * ptsDerrota) + 
+                          (s.pp_wo * ptsDerrotaWo);
+
       if (colPj !== -1) sheetTeams.getRange(rowIndex, colPj + 1).setValue(s.pj);
-      if (colPg !== -1) sheetTeams.getRange(rowIndex, colPg + 1).setValue(s.pg);
+      if (colPg !== -1) sheetTeams.getRange(rowIndex, colPg + 1).setValue(totalPg);
       if (colPe !== -1) sheetTeams.getRange(rowIndex, colPe + 1).setValue(s.pe);
-      if (colPp !== -1) sheetTeams.getRange(rowIndex, colPp + 1).setValue(s.pp);
+      if (colPp !== -1) sheetTeams.getRange(rowIndex, colPp + 1).setValue(totalPp);
       if (colGf !== -1) sheetTeams.getRange(rowIndex, colGf + 1).setValue(s.gf);
       if (colGc !== -1) sheetTeams.getRange(rowIndex, colGc + 1).setValue(s.gc);
+      if (colDg !== -1) sheetTeams.getRange(rowIndex, colDg + 1).setValue(dg);
+      if (colPuntos !== -1) sheetTeams.getRange(rowIndex, colPuntos + 1).setValue(totalPuntos);
     }
   }
 }
@@ -1226,6 +1537,7 @@ function generateAuthToken(user) {
   const payload = {
     uid: user.id_usuario,
     usr: user.usuario,
+    nom: user.nombre || '',
     rol: user.rol,
     exp: Date.now() + (CONFIG.TOKEN_EXPIRY_HOURS * 60 * 60 * 1000)
   };

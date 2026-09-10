@@ -32,6 +32,7 @@ class _MatchScoreBottomSheetState extends State<MatchScoreBottomSheet> {
   late int _penalesLocal;
   late int _penalesVisita;
   late String _estado;
+  late String _walkover;
   bool _isSaving = false;
   bool _showPenales = false;
 
@@ -50,6 +51,7 @@ class _MatchScoreBottomSheetState extends State<MatchScoreBottomSheet> {
     _penalesLocal = widget.match.penalesLocal;
     _penalesVisita = widget.match.penalesVisita;
     _estado = widget.match.estado;
+    _walkover = widget.match.walkover;
     _showPenales = widget.match.penalesLocal > 0 || widget.match.penalesVisita > 0;
   }
 
@@ -120,6 +122,57 @@ class _MatchScoreBottomSheetState extends State<MatchScoreBottomSheet> {
     );
   }
 
+  Widget _buildWoChip(String code, String label, IconData icon, Color color) {
+    final isSelected = _walkover == code;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _walkover = code;
+          if (code == 'LOCAL') {
+            _golesLocal = 3;
+            _golesVisita = 0;
+            _estado = AppConstants.stateFinalizado;
+          } else if (code == 'VISITA') {
+            _golesLocal = 0;
+            _golesVisita = 3;
+            _estado = AppConstants.stateFinalizado;
+          } else if (code == 'DOBLE') {
+            _golesLocal = 0;
+            _golesVisita = 0;
+            _estado = AppConstants.stateFinalizado;
+          }
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withAlpha(40) : AppTheme.stadiumElevatedBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? color : Colors.white12,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: isSelected ? color : AppTheme.slateTextSecondary),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? color : AppTheme.slateTextSecondary,
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _save() async {
     final token = AuthService().currentUser?.token;
     if (token == null) return;
@@ -134,6 +187,7 @@ class _MatchScoreBottomSheetState extends State<MatchScoreBottomSheet> {
       penalesLocal: _showPenales ? _penalesLocal : 0,
       penalesVisita: _showPenales ? _penalesVisita : 0,
       estado: _estado,
+      walkover: _walkover,
     );
 
     if (!mounted) return;
@@ -326,6 +380,24 @@ class _MatchScoreBottomSheetState extends State<MatchScoreBottomSheet> {
               const SizedBox(height: 16),
               const Divider(color: Colors.white12),
               const SizedBox(height: 10),
+
+              // Selector de Walkover (W.O.)
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Condición de Walkover (W.O.):', style: TextStyle(color: AppTheme.slateTextSecondary, fontSize: 12)),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  _buildWoChip('NO', 'Sin W.O.', Icons.sports_soccer, Colors.grey),
+                  _buildWoChip('LOCAL', 'Gana Local W.O.', Icons.emoji_events, AppTheme.turfGreenLight),
+                  _buildWoChip('VISITA', 'Gana Visita W.O.', Icons.emoji_events, AppTheme.turfGreenLight),
+                  _buildWoChip('DOBLE', 'Doble W.O.', Icons.cancel, AppTheme.liveRed),
+                ],
+              ),
+              const SizedBox(height: 14),
 
               // Selector de estado
               const Align(

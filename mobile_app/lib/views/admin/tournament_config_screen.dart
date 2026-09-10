@@ -6,6 +6,7 @@ import '../../config/theme.dart';
 import '../../models/tournament_config_model.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import 'users_management_screen.dart';
 
 class TournamentConfigScreen extends StatefulWidget {
   final TournamentConfigModel config;
@@ -27,6 +28,13 @@ class _TournamentConfigScreenState extends State<TournamentConfigScreen> {
   late TextEditingController _organizerNameController;
   late TextEditingController _organizerLogoController;
   late TextEditingController _bannerBgController;
+  late TextEditingController _ptsVictoriaController;
+  late TextEditingController _ptsEmpateController;
+  late TextEditingController _ptsDerrotaController;
+  late TextEditingController _ptsVictoriaWoController;
+  late TextEditingController _ptsDerrotaWoController;
+  late TextEditingController _golesWoFavorController;
+  late TextEditingController _golesWoContraController;
   late String _faseActual;
   late int _clasificados;
   late DateTime _targetDateTime;
@@ -43,6 +51,13 @@ class _TournamentConfigScreenState extends State<TournamentConfigScreen> {
     _organizerNameController = TextEditingController(text: widget.config.organizadorNombre);
     _organizerLogoController = TextEditingController(text: widget.config.organizadorLogoUrl);
     _bannerBgController = TextEditingController(text: widget.config.bannerBgUrl);
+    _ptsVictoriaController = TextEditingController(text: widget.config.puntosVictoria.toString());
+    _ptsEmpateController = TextEditingController(text: widget.config.puntosEmpate.toString());
+    _ptsDerrotaController = TextEditingController(text: widget.config.puntosDerrota.toString());
+    _ptsVictoriaWoController = TextEditingController(text: widget.config.puntosVictoriaWo.toString());
+    _ptsDerrotaWoController = TextEditingController(text: widget.config.puntosDerrotaWo.toString());
+    _golesWoFavorController = TextEditingController(text: widget.config.golesWoFavor.toString());
+    _golesWoContraController = TextEditingController(text: widget.config.golesWoContra.toString());
     _faseActual = widget.config.faseActual;
     _clasificados = widget.config.clasificadosPorGrupo;
 
@@ -67,12 +82,26 @@ class _TournamentConfigScreenState extends State<TournamentConfigScreen> {
          oldWidget.config.countdownTitle != widget.config.countdownTitle ||
          oldWidget.config.faseActual != widget.config.faseActual ||
          oldWidget.config.clasificadosPorGrupo != widget.config.clasificadosPorGrupo ||
+         oldWidget.config.puntosVictoria != widget.config.puntosVictoria ||
+         oldWidget.config.puntosEmpate != widget.config.puntosEmpate ||
+         oldWidget.config.puntosDerrota != widget.config.puntosDerrota ||
+         oldWidget.config.puntosVictoriaWo != widget.config.puntosVictoriaWo ||
+         oldWidget.config.puntosDerrotaWo != widget.config.puntosDerrotaWo ||
+         oldWidget.config.golesWoFavor != widget.config.golesWoFavor ||
+         oldWidget.config.golesWoContra != widget.config.golesWoContra ||
          oldWidget.config.countdownTarget != widget.config.countdownTarget)) {
       _nameController.text = widget.config.nombreEvento;
       _countdownTitleController.text = widget.config.countdownTitle;
       _organizerNameController.text = widget.config.organizadorNombre;
       _organizerLogoController.text = widget.config.organizadorLogoUrl;
       _bannerBgController.text = widget.config.bannerBgUrl;
+      _ptsVictoriaController.text = widget.config.puntosVictoria.toString();
+      _ptsEmpateController.text = widget.config.puntosEmpate.toString();
+      _ptsDerrotaController.text = widget.config.puntosDerrota.toString();
+      _ptsVictoriaWoController.text = widget.config.puntosVictoriaWo.toString();
+      _ptsDerrotaWoController.text = widget.config.puntosDerrotaWo.toString();
+      _golesWoFavorController.text = widget.config.golesWoFavor.toString();
+      _golesWoContraController.text = widget.config.golesWoContra.toString();
       _faseActual = widget.config.faseActual;
       _clasificados = widget.config.clasificadosPorGrupo;
       try {
@@ -90,6 +119,13 @@ class _TournamentConfigScreenState extends State<TournamentConfigScreen> {
     _organizerNameController.dispose();
     _organizerLogoController.dispose();
     _bannerBgController.dispose();
+    _ptsVictoriaController.dispose();
+    _ptsEmpateController.dispose();
+    _ptsDerrotaController.dispose();
+    _ptsVictoriaWoController.dispose();
+    _ptsDerrotaWoController.dispose();
+    _golesWoFavorController.dispose();
+    _golesWoContraController.dispose();
     super.dispose();
   }
 
@@ -171,6 +207,13 @@ class _TournamentConfigScreenState extends State<TournamentConfigScreen> {
       organizadorNombre: _organizerNameController.text.trim(),
       organizadorLogoUrl: _organizerLogoController.text.trim(),
       bannerBgUrl: _bannerBgController.text.trim(),
+      puntosVictoria: int.tryParse(_ptsVictoriaController.text.trim()) ?? 3,
+      puntosEmpate: int.tryParse(_ptsEmpateController.text.trim()) ?? 1,
+      puntosDerrota: int.tryParse(_ptsDerrotaController.text.trim()) ?? 0,
+      puntosVictoriaWo: int.tryParse(_ptsVictoriaWoController.text.trim()) ?? 3,
+      puntosDerrotaWo: int.tryParse(_ptsDerrotaWoController.text.trim()) ?? -1,
+      golesWoFavor: int.tryParse(_golesWoFavorController.text.trim()) ?? 3,
+      golesWoContra: int.tryParse(_golesWoContraController.text.trim()) ?? 0,
     );
 
     final res = await ApiService().saveTournamentConfig(token: token, config: updated);
@@ -365,6 +408,211 @@ class _TournamentConfigScreenState extends State<TournamentConfigScreen> {
                         style: TextStyle(color: AppTheme.turfGreenLight, fontSize: 11),
                       ),
                     ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Card de Sistema de Puntuación y Walkover (W.O.)
+          Card(
+            color: AppTheme.stadiumCardBg,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: AppTheme.turfGreen.withAlpha(50)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.scoreboard_outlined, color: AppTheme.turfGreen, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Sistema de Puntuación y Walkover (W.O.)',
+                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Define los puntos otorgados en partidos jugados y las sanciones reglamentarias por W.O.',
+                    style: TextStyle(color: AppTheme.slateTextSecondary, fontSize: 12),
+                  ),
+                  const Divider(color: Colors.white10, height: 24),
+
+                  // Fila Victoria, Empate, Derrota regular
+                  const Text('Partidos Jugados Normalmente', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _ptsVictoriaController,
+                          keyboardType: const TextInputType.numberWithOptions(signed: true),
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            labelText: 'Victoria (PG)',
+                            hintText: '3',
+                            prefixIcon: Icon(Icons.check_circle_outline, color: Colors.greenAccent, size: 18),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: _ptsEmpateController,
+                          keyboardType: const TextInputType.numberWithOptions(signed: true),
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            labelText: 'Empate (PE)',
+                            hintText: '1',
+                            prefixIcon: Icon(Icons.horizontal_rule, color: Colors.amberAccent, size: 18),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: _ptsDerrotaController,
+                          keyboardType: const TextInputType.numberWithOptions(signed: true),
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            labelText: 'Derrota (PP)',
+                            hintText: '0',
+                            prefixIcon: Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 18),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Fila Walkover (W.O.) Ganador y Sanción Perdedor
+                  const Text('Reglas de Walkover (W.O. / Incomparecencia)', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Ingresa un valor negativo (ej. -1 o -2) en la sanción para restar puntos reales en la tabla de posiciones.',
+                    style: TextStyle(color: Colors.amber, fontSize: 11),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _ptsVictoriaWoController,
+                          keyboardType: const TextInputType.numberWithOptions(signed: true),
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            labelText: 'Puntos Ganador W.O.',
+                            hintText: '3',
+                            prefixIcon: Icon(Icons.military_tech_outlined, color: Colors.greenAccent, size: 18),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: _ptsDerrotaWoController,
+                          keyboardType: const TextInputType.numberWithOptions(signed: true),
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            labelText: 'Sanción Perdedor W.O.',
+                            hintText: '-1',
+                            prefixIcon: Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 18),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Marcador reglamentario por W.O.
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _golesWoFavorController,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            labelText: 'Goles Ganador W.O.',
+                            hintText: '3',
+                            prefixIcon: Icon(Icons.sports_soccer, color: AppTheme.turfGreen, size: 18),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: _golesWoContraController,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            labelText: 'Goles Infractor W.O.',
+                            hintText: '0',
+                            prefixIcon: Icon(Icons.sports_soccer, color: Colors.white38, size: 18),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Card de Gestión de Usuarios y Mesas de Control
+          Card(
+            color: AppTheme.stadiumCardBg,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Colors.purpleAccent.withAlpha(60)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.manage_accounts, color: Colors.purpleAccent, size: 22),
+                      SizedBox(width: 8),
+                      Text(
+                        'Mesas de Control y Anotadores',
+                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Crea y administra cuentas exclusivas para los responsables de mesa. Solo podrán ingresar y registrar goles en sus partidos asignados.',
+                    style: TextStyle(color: AppTheme.slateTextSecondary, fontSize: 12),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.purpleAccent),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const UsersManagementScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.people_outline, color: Colors.purpleAccent),
+                      label: const Text(
+                        'Gestionar Mesas y Usuarios',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

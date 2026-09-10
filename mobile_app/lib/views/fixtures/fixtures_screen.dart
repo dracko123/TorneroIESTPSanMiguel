@@ -5,6 +5,7 @@ import '../../config/theme.dart';
 import '../../models/match_model.dart';
 import '../../models/team_model.dart';
 import '../../models/tournament_config_model.dart';
+import '../../models/user_model.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import 'fixture_generator_screen.dart';
@@ -154,12 +155,21 @@ class _FixturesScreenState extends State<FixturesScreen> {
     );
   }
 
-  void _showAddMatchDialog([MatchModel? existingMatch]) {
+  Future<void> _showAddMatchDialog([MatchModel? existingMatch]) async {
     if (widget.teams.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Debe registrar al menos 2 equipos antes de programar partidos')),
       );
       return;
+    }
+
+    final token = AuthService().currentUser?.token;
+    List<UserModel> mesaUsers = [];
+    if (token != null && AuthService().currentUser?.isSuperAdmin == true) {
+      final uRes = await ApiService().getUsers(token: token);
+      if (uRes.success && uRes.data != null) {
+        mesaUsers = uRes.data!.where((u) => u.isActivo).toList();
+      }
     }
 
     // Determinar si es partido de playoff según la fase actual del existente
@@ -189,6 +199,8 @@ class _FixturesScreenState extends State<FixturesScreen> {
     DateTime matchDateTime = existingMatch != null
         ? (DateTime.tryParse(existingMatch.fechaHora) ?? DateTime.now())
         : DateTime.now().add(const Duration(hours: 2));
+
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -317,11 +329,41 @@ class _FixturesScreenState extends State<FixturesScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Árbitro
+                  // Árbitro / Mesa de Control
+                  if (mesaUsers.isNotEmpty) ...[
+                    const Text('Mesa / Árbitro Asignado:', style: TextStyle(color: AppTheme.slateTextSecondary, fontSize: 12)),
+                    const SizedBox(height: 4),
+                    DropdownButtonFormField<String>(
+                      initialValue: mesaUsers.any((u) => u.nombre == arbitroCtrl.text || u.usuario == arbitroCtrl.text)
+                          ? (mesaUsers.firstWhere((u) => u.nombre == arbitroCtrl.text || u.usuario == arbitroCtrl.text).nombre)
+                          : null,
+                      dropdownColor: AppTheme.stadiumElevatedBg,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      decoration: const InputDecoration(hintText: 'Seleccionar Mesa de Control'),
+                      items: [
+                        const DropdownMenuItem(value: 'Por designar', child: Text('Por designar')),
+                        ...mesaUsers.map((u) => DropdownMenuItem(
+                              value: u.nombre,
+                              child: Text('${u.nombre} (${u.rol == 'SUPER_ADMIN' ? 'Admin' : 'Mesa'})'),
+                            )),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDlgState(() {
+                            arbitroCtrl.text = val;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   TextField(
                     controller: arbitroCtrl,
                     style: const TextStyle(color: Colors.white, fontSize: 13),
-                    decoration: const InputDecoration(labelText: 'Árbitro Principal'),
+                    decoration: const InputDecoration(
+                      labelText: 'Árbitro / Mesa (Texto manual)',
+                      hintText: 'Ej: Juan Pérez o Mesa 1',
+                    ),
                   ),
                   const SizedBox(height: 16),
 
@@ -842,6 +884,21 @@ class _FixturesScreenState extends State<FixturesScreen> {
                       style: TextStyle(color: estadoColor, fontSize: 10, fontWeight: FontWeight.bold),
                     ),
                   ),
+                  if (m.isWalkover) ...[
+                    const SizedBox(width: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.liveRed.withAlpha(30),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.liveRed.withAlpha(120)),
+                      ),
+                      child: const Text(
+                        'W.O.',
+                        style: TextStyle(color: AppTheme.liveRed, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                   // Botón marcador rápido ⚽
                   if (!m.isFinished)
                     IconButton(

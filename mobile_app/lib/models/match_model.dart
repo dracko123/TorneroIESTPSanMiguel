@@ -11,6 +11,7 @@ class MatchModel {
   int penalesVisita;
   String estado; // PROGRAMADO, EN_VIVO, ENTRETIEMPO, FINALIZADO
   final String arbitroAsignado;
+  String walkover; // NO, LOCAL, VISITA, DOBLE
 
   MatchModel({
     required this.idPartido,
@@ -25,6 +26,7 @@ class MatchModel {
     this.penalesVisita = 0,
     required this.estado,
     this.arbitroAsignado = 'Por designar',
+    this.walkover = 'NO',
   });
 
   bool get isLive => estado == 'EN_VIVO' || estado == 'ENTRETIEMPO';
@@ -32,6 +34,10 @@ class MatchModel {
   bool get isScheduled => estado == 'PROGRAMADO';
   bool get isPlayoff => !fase.toUpperCase().contains('GRUPO') && !fase.toUpperCase().contains('REGULAR');
   bool get isTie => golesLocal == golesVisita;
+  bool get isWalkover => walkover != 'NO' && walkover.isNotEmpty;
+  bool get isWalkoverLocal => walkover == 'LOCAL';
+  bool get isWalkoverVisita => walkover == 'VISITA';
+  bool get isWalkoverDoble => walkover == 'DOBLE';
 
   factory MatchModel.fromJson(Map<String, dynamic> json) {
     return MatchModel(
@@ -47,6 +53,7 @@ class MatchModel {
       penalesVisita: int.tryParse(json['penales_visita']?.toString() ?? '0') ?? 0,
       estado: json['estado']?.toString().toUpperCase() ?? 'PROGRAMADO',
       arbitroAsignado: json['arbitro_asignado']?.toString() ?? 'Por designar',
+      walkover: json['walkover']?.toString().toUpperCase() ?? 'NO',
     );
   }
 
@@ -64,6 +71,7 @@ class MatchModel {
       'penales_visita': penalesVisita,
       'estado': estado,
       'arbitro_asignado': arbitroAsignado,
+      'walkover': walkover,
     };
   }
 }

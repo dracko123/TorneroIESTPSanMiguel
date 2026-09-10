@@ -30,6 +30,23 @@ class _LiveControlScreenState extends State<LiveControlScreen> {
   bool _isSaving = false;
   bool _skipFinishedInNav = true;
 
+  /// Obtiene los partidos accesibles según el rol.
+  /// Si es SUPER_ADMIN ve todos; si es MESA_CONTROL solo los asignados a su usuario o nombre.
+  List<MatchModel> get _accessibleMatches {
+    final auth = AuthService();
+    if (auth.isSuperAdmin) {
+      return widget.matches;
+    }
+    final user = auth.currentUser;
+    if (user == null) return [];
+    final nom = user.nombre.trim().toLowerCase();
+    final usr = user.usuario.trim().toLowerCase();
+    return widget.matches.where((m) {
+      final arb = m.arbitroAsignado.trim().toLowerCase();
+      return arb == nom || arb == usr;
+    }).toList();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -39,11 +56,12 @@ class _LiveControlScreenState extends State<LiveControlScreen> {
   @override
   void didUpdateWidget(covariant LiveControlScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final matches = _accessibleMatches;
     if (_selectedMatch != null) {
       // Mantener SIEMPRE el partido que el usuario estaba editando
-      final updated = widget.matches.firstWhere(
+      final updated = matches.firstWhere(
         (m) => m.idPartido == _selectedMatch!.idPartido,
-        orElse: () => widget.matches.isNotEmpty ? widget.matches.first : _selectedMatch!,
+        orElse: () => matches.isNotEmpty ? matches.first : _selectedMatch!,
       );
       _selectedMatch = updated;
     } else {
@@ -53,21 +71,25 @@ class _LiveControlScreenState extends State<LiveControlScreen> {
 
   /// Selecciona el partido prioritario (primero uno EN_VIVO o ENTRETIEMPO, luego PROGRAMADO)
   void _selectInitialMatch() {
-    if (widget.matches.isEmpty) return;
+    final matches = _accessibleMatches;
+    if (matches.isEmpty) {
+      _selectedMatch = null;
+      return;
+    }
 
-    final liveMatches = widget.matches.where((m) => m.isLive).toList();
+    final liveMatches = matches.where((m) => m.isLive).toList();
     if (liveMatches.isNotEmpty) {
       _selectedMatch = liveMatches.first;
       return;
     }
 
-    final scheduled = widget.matches.where((m) => m.isScheduled).toList();
+    final scheduled = matches.where((m) => m.isScheduled).toList();
     if (scheduled.isNotEmpty) {
       _selectedMatch = scheduled.first;
       return;
     }
 
-    _selectedMatch = widget.matches.first;
+    _selectedMatch = matches.first;
   }
 
   TeamModel? _getTeam(String teamId) {
@@ -92,10 +114,11 @@ class _LiveControlScreenState extends State<LiveControlScreen> {
 
   /// Lista navegable según la opción de saltar partidos finalizados
   List<MatchModel> get _navigableMatches {
-    if (!_skipFinishedInNav) return widget.matches;
-    final active = widget.matches.where((m) => m.estado != AppConstants.stateFinalizado).toList();
+    final list = _accessibleMatches;
+    if (!_skipFinishedInNav) return list;
+    final active = list.where((m) => m.estado != AppConstants.stateFinalizado).toList();
     // Si todos están finalizados, mostrar todos
-    return active.isNotEmpty ? active : widget.matches;
+    return active.isNotEmpty ? active : list;
   }
 
   int get _currentNavIndex {
@@ -134,7 +157,7 @@ class _LiveControlScreenState extends State<LiveControlScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _MatchSelectorBottomSheet(
-        matches: widget.matches,
+        matches: _accessibleMatches,
         teams: widget.teams,
         selectedMatchId: _selectedMatch?.idPartido,
         onMatchSelected: (match) {
@@ -177,6 +200,7 @@ class _LiveControlScreenState extends State<LiveControlScreen> {
       penalesLocal: _selectedMatch!.penalesLocal,
       penalesVisita: _selectedMatch!.penalesVisita,
       estado: _selectedMatch!.estado,
+      walkover: _selectedMatch!.walkover,
     );
 
     setState(() => _isSaving = false);
@@ -321,32 +345,195 @@ class _LiveControlScreenState extends State<LiveControlScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (widget.matches.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+  void _showWalkoverDialog() {
+    if (_selectedMatch == null) return;
+    final match = _selectedMatch!;
+    final localTeam = _getTeam(match.localId);
+    final visitTeam = _getTeam(match.visitaId);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.stadiumCardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
           children: [
-            const Icon(Icons.sports_soccer, size: 64, color: AppTheme.slateTextSecondary),
-            const SizedBox(height: 16),
-            const Text('No hay partidos cargados para este evento', style: TextStyle(color: Colors.white, fontSize: 16)),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: widget.onRefreshRequested,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Actualizar Datos'),
+            Icon(Icons.flag, color: AppTheme.liveRed),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Declarar Walkover (W.O.)',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Seleccione el resultado de W.O. para este encuentro. El partido se marcará automáticamente como FINALIZADO y se aplicará la tabla de puntos configurada:',
+                style: TextStyle(color: AppTheme.slateTextSecondary, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                tileColor: AppTheme.stadiumElevatedBg,
+                leading: const Icon(Icons.emoji_events, color: AppTheme.turfGreen),
+                title: Text(
+                  'Gana ${localTeam?.nombre ?? match.localId} por W.O.',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                subtitle: Text(
+                  'El equipo visitante (${visitTeam?.nombre ?? match.visitaId}) no se presentó.',
+                  style: const TextStyle(color: AppTheme.slateTextSecondary, fontSize: 11),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _applyWalkover('LOCAL');
+                },
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                tileColor: AppTheme.stadiumElevatedBg,
+                leading: const Icon(Icons.emoji_events, color: AppTheme.turfGreen),
+                title: Text(
+                  'Gana ${visitTeam?.nombre ?? match.visitaId} por W.O.',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                subtitle: Text(
+                  'El equipo local (${localTeam?.nombre ?? match.localId}) no se presentó.',
+                  style: const TextStyle(color: AppTheme.slateTextSecondary, fontSize: 11),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _applyWalkover('VISITA');
+                },
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                tileColor: AppTheme.stadiumElevatedBg,
+                leading: const Icon(Icons.cancel, color: AppTheme.liveRed),
+                title: const Text(
+                  'Doble Walkover (Ninguno se presentó)',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                subtitle: const Text(
+                  'Ambos equipos serán sancionados según la configuración de penalización.',
+                  style: TextStyle(color: AppTheme.slateTextSecondary, fontSize: 11),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _applyWalkover('DOBLE');
+                },
+              ),
+              if (match.isWalkover) ...[
+                const SizedBox(height: 12),
+                ListTile(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  tileColor: AppTheme.stadiumElevatedBg.withAlpha(128),
+                  leading: const Icon(Icons.restart_alt, color: AppTheme.trophyGold),
+                  title: const Text(
+                    'Anular Walkover',
+                    style: TextStyle(color: AppTheme.trophyGold, fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  subtitle: const Text(
+                    'Restablecer partido a juego normal',
+                    style: TextStyle(color: AppTheme.slateTextSecondary, fontSize: 11),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _applyWalkover('NO');
+                  },
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar', style: TextStyle(color: AppTheme.slateTextSecondary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _applyWalkover(String walkoverType) {
+    if (_selectedMatch == null) return;
+    setState(() {
+      _selectedMatch!.walkover = walkoverType;
+      if (walkoverType == 'LOCAL') {
+        _selectedMatch!.golesLocal = 3;
+        _selectedMatch!.golesVisita = 0;
+        _selectedMatch!.estado = AppConstants.stateFinalizado;
+      } else if (walkoverType == 'VISITA') {
+        _selectedMatch!.golesLocal = 0;
+        _selectedMatch!.golesVisita = 3;
+        _selectedMatch!.estado = AppConstants.stateFinalizado;
+      } else if (walkoverType == 'DOBLE') {
+        _selectedMatch!.golesLocal = 0;
+        _selectedMatch!.golesVisita = 0;
+        _selectedMatch!.estado = AppConstants.stateFinalizado;
+      }
+    });
+    _updateScoreOnServer();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accessible = _accessibleMatches;
+    if (accessible.isEmpty) {
+      final isMesa = AuthService().currentUser?.rol == 'MESA_CONTROL';
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isMesa ? Icons.assignment_late_outlined : Icons.sports_soccer,
+                size: 64,
+                color: isMesa ? AppTheme.trophyGold : AppTheme.slateTextSecondary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isMesa
+                    ? 'No tienes partidos asignados'
+                    : 'No hay partidos cargados para este evento',
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isMesa
+                    ? 'Como personal de Mesa de Control, solo puedes gestionar los partidos donde figuras como árbitro/mesa asignada.\n\nSolicita al Administrador que te asigne a los partidos correspondientes.'
+                    : 'Presione actualizar para sincronizar los partidos desde Google Sheets.',
+                style: const TextStyle(color: AppTheme.slateTextSecondary, fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: widget.onRefreshRequested,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Actualizar Datos'),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    final match = _selectedMatch ?? widget.matches.first;
+    final match = _selectedMatch ?? accessible.first;
     final locTeam = _getTeam(match.localId);
     final visTeam = _getTeam(match.visitaId);
 
-    final liveCount = widget.matches.where((m) => m.isLive).length;
+    final liveCount = accessible.where((m) => m.isLive).length;
     final navList = _navigableMatches;
     final currentIdx = _currentNavIndex;
 
@@ -828,6 +1015,55 @@ class _LiveControlScreenState extends State<LiveControlScreen> {
                   const SizedBox(height: 16),
                 ],
 
+                // Banner Walkover si aplica
+                if (match.isWalkover) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.liveRed.withAlpha(25),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.liveRed.withAlpha(120)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.flag, size: 22, color: AppTheme.liveRed),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                match.isWalkoverDoble
+                                    ? 'PARTIDO CON DOBLE WALKOVER'
+                                    : (match.isWalkoverLocal
+                                        ? 'VICTORIA POR W.O.: ${locTeam?.nombre ?? match.localId}'
+                                        : 'VICTORIA POR W.O.: ${visTeam?.nombre ?? match.visitaId}'),
+                                style: const TextStyle(
+                                  color: AppTheme.liveRed,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                match.isWalkoverDoble
+                                    ? 'Ninguno de los dos equipos se presentó al partido.'
+                                    : 'El rival no se presentó al encuentro programado.',
+                                style: const TextStyle(color: Colors.white70, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _showWalkoverDialog,
+                          child: const Text('Cambiar', style: TextStyle(color: AppTheme.trophyGold, fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // Árbitro
                 if (match.arbitroAsignado.isNotEmpty) ...[
                   Row(
@@ -835,13 +1071,42 @@ class _LiveControlScreenState extends State<LiveControlScreen> {
                       const Icon(Icons.sports, size: 16, color: AppTheme.slateTextSecondary),
                       const SizedBox(width: 6),
                       Text(
-                        'Árbitro asignado: ${match.arbitroAsignado}',
+                        'Árbitro / Mesa: ${match.arbitroAsignado}',
                         style: const TextStyle(color: AppTheme.slateTextSecondary, fontSize: 13),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                 ],
+
+                // Botón para declarar o modificar Walkover
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _showWalkoverDialog,
+                    icon: Icon(
+                      match.isWalkover ? Icons.edit_note : Icons.flag_outlined,
+                      size: 18,
+                      color: match.isWalkover ? AppTheme.trophyGold : AppTheme.slateTextSecondary,
+                    ),
+                    label: Text(
+                      match.isWalkover ? 'MODIFICAR / ANULAR WALKOVER' : 'DECLARAR WALKOVER (W.O.)',
+                      style: TextStyle(
+                        color: match.isWalkover ? AppTheme.trophyGold : Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: match.isWalkover ? AppTheme.trophyGold.withAlpha(150) : Colors.white.withAlpha(40),
+                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
 
                 // BOTÓN DE SINCRONIZACIÓN CON GOOGLE SHEETS
                 SizedBox(
@@ -1206,6 +1471,21 @@ class _MatchSelectorBottomSheetState extends State<_MatchSelectorBottomSheet> wi
                               m.fase,
                               style: const TextStyle(color: AppTheme.trophyGold, fontSize: 9, fontWeight: FontWeight.bold),
                             ),
+                            if (m.isWalkover) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.liveRed.withAlpha(40),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: AppTheme.liveRed.withAlpha(100)),
+                                ),
+                                child: const Text(
+                                  'W.O.',
+                                  style: TextStyle(color: AppTheme.liveRed, fontSize: 9, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 4),

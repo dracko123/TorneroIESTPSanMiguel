@@ -8,6 +8,13 @@ export interface TournamentConfig {
   organizador_nombre?: string;
   organizador_logo_url?: string;
   banner_bg_url?: string;
+  puntos_victoria?: number;
+  puntos_empate?: number;
+  puntos_derrota?: number;
+  puntos_victoria_wo?: number;
+  puntos_derrota_wo?: number;
+  goles_wo_favor?: number;
+  goles_wo_contra?: number;
 }
 
 export interface Team {
@@ -41,6 +48,7 @@ export interface Match {
   penales_visita?: number;
   estado: MatchStatus;
   arbitro_asignado: string;
+  walkover?: 'NO' | 'LOCAL' | 'VISITA' | 'DOBLE';
 }
 
 export interface BracketMatch {
