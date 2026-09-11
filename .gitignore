@@ -48,3 +48,8 @@ build/
 *.aab
 *.exe
 *.dll
+
+# Exclusivos en PC local (solo la web se publica en GitHub)
+mobile_app/
+backend/
+MASTER_PLAN_ANTIGRAVITY.md
