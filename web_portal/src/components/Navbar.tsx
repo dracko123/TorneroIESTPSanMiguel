@@ -1,5 +1,7 @@
+import React, { useState } from 'react';
 import { Trophy, Radio } from 'lucide-react';
 import type { TournamentConfig } from '../types/tournament';
+import { normalizeImageUrl } from '../utils/imageUrl';
 
 interface NavbarProps {
   config: TournamentConfig;
@@ -14,6 +16,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   loading,
   lastUpdated
 }) => {
+  const [logoError, setLogoError] = useState(false);
+  const logoUrl = normalizeImageUrl(config.organizador_logo_url);
+
   const formattedTime = lastUpdated.toLocaleTimeString('es-ES', {
     hour: '2-digit',
     minute: '2-digit'
@@ -32,14 +37,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="relative group">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/25 flex items-center justify-center">
                 <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center overflow-hidden p-1">
-                  {config.organizador_logo_url ? (
+                  {logoUrl && !logoError ? (
                     <img
-                      src={config.organizador_logo_url}
+                      src={logoUrl}
                       alt={config.organizador_nombre || 'Organizador'}
+                      referrerPolicy="no-referrer"
                       className="w-full h-full object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
+                      onError={() => setLogoError(true)}
                     />
                   ) : (
                     <Trophy className="w-6 h-6 text-amber-400" />
@@ -117,7 +121,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               title="Consultar por este servicio en WhatsApp: +51 931 990 036"
             >
               <img
-                src="/thedesigninyoureyes-logo.png"
+                src={`${import.meta.env.BASE_URL}thedesigninyoureyes-logo.png`}
                 alt="Thedesigninyoureyes"
                 className="h-8 sm:h-9 w-auto object-contain transition-all duration-300 filter drop-shadow-[0_0_8px_rgba(255,255,255,0.9)] drop-shadow-[0_0_18px_rgba(255,255,255,0.45)] group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,1)] group-hover:drop-shadow-[0_0_24px_rgba(255,255,255,0.7)]"
               />

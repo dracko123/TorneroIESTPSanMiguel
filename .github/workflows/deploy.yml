@@ -1,0 +1,56 @@
+name: Deploy Web Portal to GitHub Pages
+
+on:
+  # Se ejecuta automáticamente en cada push a la rama main
+  push:
+    branches: [ "main" ]
+  # Permite ejecutar el despliegue manualmente desde la pestaña Actions en GitHub
+  workflow_dispatch:
+
+# Permisos requeridos para desplegar en GitHub Pages y crear el token de identidad
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Permite un solo despliegue concurrente a la vez
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'web_portal/package-lock.json'
+
+      - name: Instalar dependencias
+        run: npm ci
+        working-directory: web_portal
+
+      - name: Compilar Web Portal para producción (Vite)
+        run: npm run build
+        working-directory: web_portal
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir artefacto compilado (dist)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'web_portal/dist'
+
+      - name: Desplegar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Shield } from 'lucide-react';
+import { normalizeImageUrl } from '../utils/imageUrl';
 
 interface TeamBadgeProps {
   name: string;
@@ -31,6 +32,7 @@ export const TeamBadge: React.FC<TeamBadgeProps> = ({
   className = ''
 }) => {
   const [imageError, setImageError] = useState(false);
+  const normalizedLogo = normalizeImageUrl(logoUrl);
 
   const getBadgeInitials = (n: string): string => {
     if (!n) return '?';
@@ -45,7 +47,7 @@ export const TeamBadge: React.FC<TeamBadgeProps> = ({
 
   const initial = getBadgeInitials(name);
 
-  if (logoUrl && !imageError) {
+  if (normalizedLogo && !imageError) {
     return (
       <div
         className={`relative inline-flex items-center justify-center shrink-0 rounded-full p-0.5 shadow-md overflow-hidden bg-slate-900 border border-white/20 ${sizeClasses[size]} ${className}`}
@@ -53,8 +55,9 @@ export const TeamBadge: React.FC<TeamBadgeProps> = ({
         title={name}
       >
         <img
-          src={logoUrl}
+          src={normalizedLogo}
           alt={name}
+          referrerPolicy="no-referrer"
           className="w-full h-full object-cover rounded-full"
           onError={() => setImageError(true)}
           loading="lazy"

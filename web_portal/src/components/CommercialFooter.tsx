@@ -26,7 +26,7 @@ export const CommercialFooter: React.FC<CommercialFooterProps> = ({ config }) =>
             <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-6 max-w-2xl">
               <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl bg-white/90 backdrop-blur-md border border-white/40 p-2.5 shadow-2xl flex-shrink-0 flex items-center justify-center group hover:bg-white transition-all duration-300">
                 <img
-                  src="/thedesigninyoureyes-logo.png"
+                  src={`${import.meta.env.BASE_URL}thedesigninyoureyes-logo.png`}
                   alt="Thedesigninyoureyes - Marketing, Audiovisual, Platforms & Apps"
                   className="w-full h-full object-contain filter drop-shadow-sm group-hover:scale-105 transition-transform duration-300"
                 />
