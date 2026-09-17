@@ -6,17 +6,21 @@ import { GroupStandings } from './components/GroupStandings';
 import { PlayoffsBracket } from './components/PlayoffsBracket';
 import { CommercialFooter } from './components/CommercialFooter';
 import { WhatsAppFloatButton } from './components/WhatsAppFloatButton';
+import { LoadingScreen } from './components/LoadingScreen';
 
 export function App() {
   const {
     data,
     loading,
     lastUpdated,
-    isLiveSync
+    isLiveSync,
+    isInitialLoading
   } = useTournamentData();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 relative overflow-hidden flex flex-col justify-between selection:bg-emerald-500 selection:text-black">
+      {/* Pantalla de carga animada — visible solo en primera visita sin caché */}
+      <LoadingScreen isLoading={isInitialLoading} />
       {/* Luces atmosféricas de estadio (Estética Dark Stadium) */}
       <div className="stadium-light bg-emerald-600 top-10 left-1/4 opacity-15"></div>
       <div className="stadium-light bg-indigo-600 top-96 right-10 opacity-20"></div>

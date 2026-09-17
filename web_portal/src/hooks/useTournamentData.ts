@@ -5,6 +5,25 @@ import { TOURNAMENT_CONFIG } from '../config/tournamentConfig';
 
 const CACHE_KEY = 'antigravity_tournament_data_cache';
 
+// Determina si hay caché real de sesiones anteriores (equipos reales, no muestra)
+function hasRealCache(): boolean {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) return false;
+    const parsed = JSON.parse(cached);
+    // Consideramos caché real si tiene equipos (teams con al menos 1 elemento real)
+    return !!(
+      parsed &&
+      parsed.success &&
+      Array.isArray(parsed.teams) &&
+      parsed.teams.length > 0 &&
+      Array.isArray(parsed.matches)
+    );
+  } catch {
+    return false;
+  }
+}
+
 // Obtiene datos previos en caché para carga inmediata (0 ms)
 function getInitialData(): TournamentData {
   try {
@@ -30,6 +49,9 @@ export function useTournamentData() {
     // Si ya teníamos caché de una sesión previa válida, marcar como sincronizado
     return localStorage.getItem(CACHE_KEY) !== null;
   });
+  // isInitialLoading: true solo en la primera carga cuando no hay caché real previa.
+  // Controla la pantalla de carga animada — false para usuarios recurrentes con caché.
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(!hasRealCache());
 
   const consecutiveErrorsRef = useRef<number>(0);
   const fetchRef = useRef<() => Promise<void>>(async () => {});
@@ -87,6 +109,8 @@ export function useTournamentData() {
       setError(err.message || 'Error de conexión');
     } finally {
       setLoading(false);
+      // El primer fetch (exitoso o fallido) resuelve la pantalla de carga inicial
+      setIsInitialLoading(false);
     }
   }, []);
 
@@ -148,6 +172,7 @@ export function useTournamentData() {
     error,
     lastUpdated,
     isLiveSync,
+    isInitialLoading,
     refreshNow: () => fetchData()
   };
 }
