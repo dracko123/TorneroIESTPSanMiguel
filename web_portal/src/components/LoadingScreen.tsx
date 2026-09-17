@@ -17,7 +17,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeDot, setActiveDot] = useState(0);
 
-  // Manejo del desmontaje tras el fade-out
+  // Manejo del desmontaje tras el fade-out suave
   useEffect(() => {
     if (!isLoading) {
       const timeout = setTimeout(() => setVisible(false), 700);
@@ -27,7 +27,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading }) => {
     }
   }, [isLoading]);
 
-  // Animación de los puntos de progreso (onda consecutiva)
+  // Barra de puntos dinámicos en onda continua
   useEffect(() => {
     const dotInterval = setInterval(() => {
       setActiveDot((prev) => (prev + 1) % 5);
@@ -35,18 +35,18 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading }) => {
     return () => clearInterval(dotInterval);
   }, []);
 
-  // Efecto máquina de escribir (Typing effect) amigable
+  // Efecto máquina de escribir (Typing effect)
   useEffect(() => {
     const targetPhrase = TYPING_PHRASES[phraseIndex];
-    const typingSpeed = isDeleting ? 38 : 75;
+    const typingSpeed = isDeleting ? 38 : 70;
 
     const timer = setTimeout(() => {
       if (!isDeleting) {
         if (currentText.length < targetPhrase.length) {
           setCurrentText(targetPhrase.slice(0, currentText.length + 1));
         } else {
-          // Pausa con la palabra completa antes de borrar
-          setTimeout(() => setIsDeleting(true), 2200);
+          // Pausa con la frase completa visible
+          setTimeout(() => setIsDeleting(true), 2400);
         }
       } else {
         if (currentText.length > 0) {
@@ -78,20 +78,20 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading }) => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '2.2rem',
+        gap: '1.4rem',
         padding: '1.5rem',
         userSelect: 'none',
       }}
     >
-      {/* Luces atmosféricas de estadio con pulsación lenta */}
+      {/* Luces atmosféricas de estadio */}
       <div
         style={{
           position: 'absolute',
-          top: '12%',
-          left: '22%',
-          width: '460px',
-          height: '460px',
-          background: 'radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 68%)',
+          top: '15%',
+          left: '25%',
+          width: '380px',
+          height: '380px',
+          background: 'radial-gradient(circle, rgba(16,185,129,0.14) 0%, transparent 70%)',
           borderRadius: '50%',
           pointerEvents: 'none',
           animation: 'ambientGlow 4s ease-in-out infinite alternate',
@@ -100,214 +100,170 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading }) => {
       <div
         style={{
           position: 'absolute',
-          bottom: '12%',
-          right: '20%',
-          width: '420px',
-          height: '420px',
-          background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 68%)',
+          bottom: '15%',
+          right: '25%',
+          width: '360px',
+          height: '360px',
+          background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)',
           borderRadius: '50%',
           pointerEvents: 'none',
           animation: 'ambientGlow 5s ease-in-out infinite alternate-reverse',
         }}
       />
 
-      {/* Contenedor flotante de la pelota y sombra */}
+      {/* Badge superior "Cargando Torneo" */}
       <div
-        className="ball-container"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '4px 12px',
+          borderRadius: '9999px',
+          backgroundColor: 'rgba(16,185,129,0.1)',
+          border: '1px solid rgba(16,185,129,0.3)',
+          boxShadow: '0 0 12px rgba(16,185,129,0.15)',
+        }}
+      >
+        <span
+          style={{
+            width: '6px',
+            height: '6px',
+            borderRadius: '50%',
+            backgroundColor: '#10b981',
+            boxShadow: '0 0 8px #10b981',
+            animation: 'dotBlink 1.4s infinite',
+          }}
+        />
+        <span
+          style={{
+            color: '#34d399',
+            fontSize: '0.68rem',
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+          }}
+        >
+          Cargando Torneo
+        </span>
+      </div>
+
+      {/* Contenedor compacto de la Pelota Al Rihla (84px) */}
+      <div
         style={{
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          perspective: '1000px',
+          justifyContent: 'center',
+          margin: '0.5rem 0',
         }}
       >
-        {/* Aura / resplandor vivo detrás de la pelota */}
+        {/* Aura viva circular detrás del balón */}
         <div
           style={{
             position: 'absolute',
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '210px',
-            height: '210px',
-            background: 'radial-gradient(circle, rgba(16,185,129,0.22) 0%, rgba(16,185,129,0.05) 45%, transparent 70%)',
+            width: '120px',
+            height: '120px',
+            background: 'radial-gradient(circle, rgba(16,185,129,0.25) 0%, rgba(56,189,248,0.12) 45%, transparent 70%)',
             borderRadius: '50%',
-            animation: 'auraPulse 2.8s ease-in-out infinite',
+            animation: 'auraPulse 2.6s ease-in-out infinite',
             pointerEvents: 'none',
           }}
         />
 
-        {/* Envoltorio con flotación suave (Bobbing) */}
+        {/* Flotación suave (Levitación vertical) */}
         <div
           style={{
-            animation: 'floatingBall 2.8s ease-in-out infinite',
+            animation: 'ballFloat 2.6s ease-in-out infinite',
             position: 'relative',
-            width: '160px',
-            height: '160px',
+            width: '84px',
+            height: '84px',
           }}
         >
-          {/* Pelota de fútbol girando suave en 3D */}
-          <div
-            className="ball-spin"
-            style={{
-              width: '160px',
-              height: '160px',
-              animation: 'smoothSpin3D 3.2s linear infinite',
-              transformStyle: 'preserve-3d',
-            }}
-          >
-            <svg
-              viewBox="0 0 160 160"
-              width="160"
-              height="160"
-              xmlns="http://www.w3.org/2000/svg"
-              style={{ filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.5))' }}
-            >
-              <defs>
-                <radialGradient id="ballGradient" cx="36%" cy="30%" r="68%">
-                  <stop offset="0%" stopColor="#ffffff" />
-                  <stop offset="55%" stopColor="#e2e8f0" />
-                  <stop offset="85%" stopColor="#cbd5e1" />
-                  <stop offset="100%" stopColor="#94a3b8" />
-                </radialGradient>
-                <radialGradient id="shineGradient" cx="34%" cy="26%" r="38%">
-                  <stop offset="0%" stopColor="rgba(255,255,255,0.9)" />
-                  <stop offset="60%" stopColor="rgba(255,255,255,0.25)" />
-                  <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-                </radialGradient>
-                <clipPath id="ballClip">
-                  <circle cx="80" cy="80" r="76" />
-                </clipPath>
-              </defs>
-
-              {/* Esfera base */}
-              <circle cx="80" cy="80" r="76" fill="url(#ballGradient)" />
-
-              {/* Paneles del balón (patrón geométrico de fútbol) */}
-              <g clipPath="url(#ballClip)" fill="#1e293b" opacity="0.88">
-                {/* Pentágono central */}
-                <polygon points="80,42 101,57 93,81 67,81 59,57" />
-                {/* Pentágono superior izquierdo */}
-                <polygon points="46,24 67,24 75,42 59,57 38,48" />
-                {/* Pentágono superior derecho */}
-                <polygon points="114,24 122,48 101,57 85,42 93,24" />
-                {/* Pentágono izquierdo */}
-                <polygon points="18,66 38,48 59,57 67,81 46,93 22,84" />
-                {/* Pentágono derecho */}
-                <polygon points="142,66 138,84 114,93 101,81 101,57 122,48" />
-                {/* Pentágono inferior izquierdo */}
-                <polygon points="46,93 67,81 93,81 101,93 88,114 58,114" />
-                {/* Pentágono inferior */}
-                <polygon points="58,114 88,114 96,132 80,140 64,132" />
-              </g>
-
-              {/* Brillo especular esférico */}
-              <circle cx="80" cy="80" r="76" fill="url(#shineGradient)" />
-
-              {/* Borde exterior fino con resplandor */}
-              <circle
-                cx="80"
-                cy="80"
-                r="76"
-                fill="none"
-                stroke="rgba(16,185,129,0.35)"
-                strokeWidth="1.5"
-              />
-            </svg>
-          </div>
-
-          {/* Logo circular de TheDesignInYourEyes superpuesto en el centro */}
+          {/* Giro 2D continuo en el eje Z: rotación 100% circular, regular y perfecta */}
           <div
             style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '68px',
-              height: '68px',
+              width: '84px',
+              height: '84px',
               borderRadius: '50%',
               overflow: 'hidden',
-              border: '2px solid rgba(16,185,129,0.85)',
-              boxShadow: '0 0 22px rgba(16,185,129,0.5), 0 6px 16px rgba(0,0,0,0.6)',
-              backgroundColor: 'rgba(255,255,255,0.96)',
-              backdropFilter: 'blur(8px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 10,
-              animation: 'logoSmoothCounterSpin 3.2s linear infinite',
-              padding: '4px',
+              animation: 'ballRollZ 3.4s linear infinite',
+              filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.55))',
             }}
           >
             <img
-              src={`${import.meta.env.BASE_URL}thedesigninyoureyes-logo.png`}
-              alt="TheDesignInYourEyes"
+              src={`${import.meta.env.BASE_URL}al-rihla-ball.png`}
+              alt="Pelota Oficial Al Rihla"
               style={{
-                width: '56px',
-                height: '56px',
-                objectFit: 'contain',
-                borderRadius: '50%',
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
               }}
             />
           </div>
         </div>
 
-        {/* Sombra proyectada con pulsación reactiva al salto */}
+        {/* Sombra de contacto sincronizada con la flotación */}
         <div
           style={{
-            marginTop: '18px',
-            width: '110px',
-            height: '14px',
-            background: 'radial-gradient(ellipse, rgba(16,185,129,0.3) 0%, rgba(16,185,129,0.1) 40%, transparent 75%)',
+            marginTop: '10px',
+            width: '64px',
+            height: '10px',
+            background: 'radial-gradient(ellipse, rgba(16,185,129,0.35) 0%, rgba(0,0,0,0.4) 40%, transparent 75%)',
             borderRadius: '50%',
-            animation: 'shadowSync 2.8s ease-in-out infinite',
+            animation: 'shadowSync 2.6s ease-in-out infinite',
           }}
         />
       </div>
 
-      {/* Sección de textos y marca con efecto typing */}
-      <div style={{ textAlign: 'center', maxWidth: '380px' }}>
-        {/* Badge superior sutil */}
+      {/* Bloque de Marca: Logo TheDesignInYourEyes + Typing + Progreso */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+          maxWidth: '360px',
+          gap: '8px',
+        }}
+      >
+        {/* Logo de TheDesignInYourEyes nítido y enmarcado con cristal */}
         <div
           style={{
-            display: 'inline-flex',
+            width: '46px',
+            height: '46px',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            border: '1.5px solid rgba(16,185,129,0.7)',
+            boxShadow: '0 0 16px rgba(16,185,129,0.35), 0 4px 10px rgba(0,0,0,0.5)',
+            backgroundColor: 'rgba(255,255,255,0.96)',
+            display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            padding: '4px 12px',
-            borderRadius: '9999px',
-            backgroundColor: 'rgba(16,185,129,0.1)',
-            border: '1px solid rgba(16,185,129,0.25)',
-            marginBottom: '12px',
+            justifyContent: 'center',
+            padding: '3px',
+            animation: 'logoPulse 2.6s ease-in-out infinite',
           }}
         >
-          <span
+          <img
+            src={`${import.meta.env.BASE_URL}thedesigninyoureyes-logo.png`}
+            alt="TheDesignInYourEyes"
             style={{
-              width: '7px',
-              height: '7px',
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
               borderRadius: '50%',
-              backgroundColor: '#10b981',
-              boxShadow: '0 0 8px #10b981',
-              animation: 'dotBlink 1.4s infinite',
             }}
           />
-          <span
-            style={{
-              color: '#34d399',
-              fontSize: '0.68rem',
-              fontWeight: 700,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-            }}
-          >
-            Cargando Torneo
-          </span>
         </div>
 
-        {/* Texto con efecto máquina de escribir (Typing effect) */}
+        {/* Texto animado con máquina de escribir */}
         <div
           style={{
-            minHeight: '36px',
+            minHeight: '32px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -315,55 +271,53 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading }) => {
         >
           <h2
             style={{
-              fontSize: '1.25rem',
+              fontSize: '1.15rem',
               fontWeight: 800,
-              letterSpacing: '0.04em',
+              letterSpacing: '0.03em',
               color: '#f8fafc',
               margin: 0,
               display: 'inline-flex',
               alignItems: 'center',
-              textShadow: '0 2px 10px rgba(0,0,0,0.5)',
+              textShadow: '0 2px 8px rgba(0,0,0,0.6)',
             }}
           >
             <span>{currentText}</span>
-            {/* Cursor parpadeante estilo terminal moderno */}
             <span
               className="typing-cursor"
               style={{
                 display: 'inline-block',
-                width: '2.5px',
-                height: '1.2em',
+                width: '2px',
+                height: '1.15em',
                 backgroundColor: '#10b981',
                 marginLeft: '3px',
                 borderRadius: '1px',
-                boxShadow: '0 0 8px rgba(16,185,129,0.8)',
+                boxShadow: '0 0 8px rgba(16,185,129,0.85)',
                 animation: 'cursorBlink 0.8s steps(2, start) infinite',
               }}
             />
           </h2>
         </div>
 
-        {/* Subtítulo complementario */}
+        {/* Lema secundario deportivo */}
         <p
           style={{
-            color: '#64748b',
-            fontSize: '0.75rem',
-            letterSpacing: '0.06em',
-            marginTop: '6px',
-            marginBottom: '16px',
+            color: '#94a3b8',
+            fontSize: '0.72rem',
+            letterSpacing: '0.05em',
+            margin: 0,
           }}
         >
           Experiencia Deportiva en Vivo
         </p>
 
-        {/* Barra de progreso con puntos dinámicos consecutivos */}
+        {/* Barra de puntos dinámicos en onda de progreso */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '8px',
-            marginTop: '8px',
+            gap: '6px',
+            marginTop: '4px',
           }}
         >
           {[0, 1, 2, 3, 4].map((index) => {
@@ -372,11 +326,11 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading }) => {
               <div
                 key={index}
                 style={{
-                  width: isActive ? '24px' : '8px',
-                  height: '8px',
+                  width: isActive ? '20px' : '6px',
+                  height: '6px',
                   borderRadius: '9999px',
-                  backgroundColor: isActive ? '#10b981' : 'rgba(71,85,105,0.4)',
-                  boxShadow: isActive ? '0 0 12px rgba(16,185,129,0.7)' : 'none',
+                  backgroundColor: isActive ? '#10b981' : 'rgba(71,85,105,0.45)',
+                  boxShadow: isActive ? '0 0 10px rgba(16,185,129,0.8)' : 'none',
                   transition: 'all 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
               />
@@ -385,48 +339,47 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading }) => {
         </div>
       </div>
 
-      {/* Keyframes de animación CSS dedicados */}
+      {/* Keyframes de animación optimizados */}
       <style>{`
-        @keyframes smoothSpin3D {
-          0%   { transform: rotateY(0deg) rotateX(10deg); }
-          100% { transform: rotateY(360deg) rotateX(10deg); }
+        /* Giro continuo circular en eje Z: 100% simétrico, fluido y natural */
+        @keyframes ballRollZ {
+          0%   { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
 
-        @keyframes logoSmoothCounterSpin {
-          0%   { transform: translate(-50%, -50%) rotateY(0deg); }
-          100% { transform: translate(-50%, -50%) rotateY(-360deg); }
-        }
-
-        @keyframes floatingBall {
+        /* Levitación suave arriba/abajo */
+        @keyframes ballFloat {
           0%, 100% { transform: translateY(0px); }
-          50%      { transform: translateY(-10px); }
+          50%      { transform: translateY(-7px); }
         }
 
+        /* Sombra reactiva a la levitación */
         @keyframes shadowSync {
           0%, 100% {
-            opacity: 0.55;
+            opacity: 0.6;
             transform: scaleX(1) scaleY(1);
           }
           50% {
-            opacity: 0.25;
-            transform: scaleX(0.8) scaleY(0.7);
+            opacity: 0.3;
+            transform: scaleX(0.82) scaleY(0.75);
           }
         }
 
+        /* Aura viva con respiración sutil */
         @keyframes auraPulse {
-          0%, 100% {
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 0.7;
-          }
-          50% {
-            transform: translate(-50%, -50%) scale(1.15);
-            opacity: 1;
-          }
+          0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
+          50%      { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+        }
+
+        /* Logo con leve micro-respiración */
+        @keyframes logoPulse {
+          0%, 100% { transform: scale(1); }
+          50%      { transform: scale(1.04); }
         }
 
         @keyframes ambientGlow {
-          0%   { transform: scale(1) translate(0, 0); opacity: 0.12; }
-          100% { transform: scale(1.18) translate(15px, -15px); opacity: 0.22; }
+          0%   { transform: scale(1); opacity: 0.12; }
+          100% { transform: scale(1.18); opacity: 0.22; }
         }
 
         @keyframes cursorBlink {
