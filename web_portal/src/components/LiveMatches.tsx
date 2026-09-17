@@ -9,7 +9,7 @@ interface LiveMatchesProps {
 }
 
 export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
-  const [activeFilter, setActiveFilter] = useState<'ALL' | 'LIVE' | 'SCHEDULED' | 'FINISHED'>('ALL');
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'LIVE' | 'SCHEDULED' | 'FINISHED'>('SCHEDULED');
   const [phaseFilter, setPhaseFilter] = useState<string>('ALL');
 
   // Mapeo rápido de id_equipo -> Team para no hacer finds repetidos
@@ -97,18 +97,19 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
       {/* Barra de Filtros */}
       <div className="flex flex-wrap items-center gap-2 mb-6 pb-2 border-b border-white/5">
         <button
-          onClick={() => setActiveFilter('ALL')}
+          onClick={() => setActiveFilter('SCHEDULED')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            activeFilter === 'ALL'
-              ? 'bg-white text-slate-950 shadow-md shadow-white/10'
-              : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800'
+            activeFilter === 'SCHEDULED'
+              ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/25'
+              : 'bg-slate-900/80 text-slate-400 hover:text-sky-400 hover:bg-slate-800'
           }`}
         >
-          <span>Todos</span>
+          <Calendar className="w-3.5 h-3.5" />
+          <span>Por Jugar</span>
           <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${
-            activeFilter === 'ALL' ? 'bg-slate-900 text-white' : 'bg-slate-800 text-slate-400'
+            activeFilter === 'SCHEDULED' ? 'bg-slate-950 text-sky-400' : 'bg-slate-800 text-slate-400'
           }`}>
-            {counts.all}
+            {counts.scheduled}
           </span>
         </button>
 
@@ -130,23 +131,6 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
         </button>
 
         <button
-          onClick={() => setActiveFilter('SCHEDULED')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            activeFilter === 'SCHEDULED'
-              ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/25'
-              : 'bg-slate-900/80 text-slate-400 hover:text-sky-400 hover:bg-slate-800'
-          }`}
-        >
-          <Calendar className="w-3.5 h-3.5" />
-          <span>Por Jugar</span>
-          <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${
-            activeFilter === 'SCHEDULED' ? 'bg-slate-950 text-sky-400' : 'bg-slate-800 text-slate-400'
-          }`}>
-            {counts.scheduled}
-          </span>
-        </button>
-
-        <button
           onClick={() => setActiveFilter('FINISHED')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeFilter === 'FINISHED'
@@ -160,6 +144,22 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
             activeFilter === 'FINISHED' ? 'bg-slate-950 text-white' : 'bg-slate-800 text-slate-400'
           }`}>
             {counts.finished}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveFilter('ALL')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            activeFilter === 'ALL'
+              ? 'bg-white text-slate-950 shadow-md shadow-white/10'
+              : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <span>Todos</span>
+          <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${
+            activeFilter === 'ALL' ? 'bg-slate-900 text-white' : 'bg-slate-800 text-slate-400'
+          }`}>
+            {counts.all}
           </span>
         </button>
       </div>
