@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import type { Match, Team } from '../types/tournament';
 import { MatchCard } from './MatchCard';
 import { Calendar, CheckCircle, Radio } from 'lucide-react';
@@ -9,8 +9,26 @@ interface LiveMatchesProps {
 }
 
 export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
-  const [activeFilter, setActiveFilter] = useState<'ALL' | 'LIVE' | 'SCHEDULED' | 'FINISHED'>('SCHEDULED');
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'LIVE' | 'SCHEDULED' | 'FINISHED'>('LIVE');
   const [phaseFilter, setPhaseFilter] = useState<string>('ALL');
+  const userInteractedRef = useRef<boolean>(false);
+
+  // Selección inteligente al cargar los partidos si el usuario no ha interactuado manualmente
+  useEffect(() => {
+    if (userInteractedRef.current || matches.length === 0) return;
+    const hasLive = matches.some(m => m.estado === 'EN_VIVO' || m.estado === 'ENTRETIEMPO');
+    if (hasLive) {
+      setActiveFilter('LIVE');
+    } else {
+      const hasScheduled = matches.some(m => m.estado === 'PROGRAMADO');
+      setActiveFilter(hasScheduled ? 'SCHEDULED' : 'FINISHED');
+    }
+  }, [matches]);
+
+  const handleFilterClick = (filter: 'ALL' | 'LIVE' | 'SCHEDULED' | 'FINISHED') => {
+    userInteractedRef.current = true;
+    setActiveFilter(filter);
+  };
 
   // Mapeo rápido de id_equipo -> Team para no hacer finds repetidos
   const teamsMap = useMemo(() => {
@@ -38,9 +56,9 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
     };
   }, [matches]);
 
-  // Filtrado de partidos
+  // Filtrado y ordenamiento de partidos
   const filteredMatches = useMemo(() => {
-    return matches.filter(m => {
+    const filtered = matches.filter(m => {
       // Filtro de fase
       if (phaseFilter !== 'ALL' && m.fase !== phaseFilter) {
         return false;
@@ -57,6 +75,56 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
         return m.estado === 'FINALIZADO';
       }
       return true;
+    });
+
+    const getTime = (dateStr?: string) => {
+      if (!dateStr) return 0;
+      const t = new Date(dateStr).getTime();
+      return isNaN(t) ? 0 : t;
+    };
+
+    return filtered.sort((a, b) => {
+      const timeA = getTime(a.fecha_hora);
+      const timeB = getTime(b.fecha_hora);
+
+      // 1. Partidos Finalizados (Jugados): del más reciente al más antiguo (Descendente)
+      if (activeFilter === 'FINISHED') {
+        if (timeB !== timeA) return timeB - timeA;
+        return (b.id_partido || '').localeCompare(a.id_partido || '');
+      }
+
+      // 2. Partidos Programados (Por Jugar): del más próximo al más lejano (Ascendente)
+      if (activeFilter === 'SCHEDULED') {
+        if (timeA !== timeB) return timeA - timeB;
+        return (a.id_partido || '').localeCompare(b.id_partido || '');
+      }
+
+      // 3. Partidos En Vivo: cronológico
+      if (activeFilter === 'LIVE') {
+        if (timeA !== timeB) return timeA - timeB;
+        return (a.id_partido || '').localeCompare(b.id_partido || '');
+      }
+
+      // 4. Pestaña "Todos": Prioridad por estado (En Vivo > Por Jugar > Finalizados)
+      const statusPriority: Record<string, number> = {
+        'EN_VIVO': 1,
+        'ENTRETIEMPO': 1,
+        'PROGRAMADO': 2,
+        'FINALIZADO': 3
+      };
+      const prioA = statusPriority[a.estado] || 4;
+      const prioB = statusPriority[b.estado] || 4;
+      if (prioA !== prioB) return prioA - prioB;
+
+      // Si ambos están finalizados en "Todos", el más reciente primero
+      if (a.estado === 'FINALIZADO') {
+        if (timeB !== timeA) return timeB - timeA;
+        return (b.id_partido || '').localeCompare(a.id_partido || '');
+      }
+
+      // Para los programados o en vivo en "Todos", cronológico normal
+      if (timeA !== timeB) return timeA - timeB;
+      return (a.id_partido || '').localeCompare(b.id_partido || '');
     });
   }, [matches, activeFilter, phaseFilter]);
 
@@ -94,27 +162,11 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
         )}
       </div>
 
-      {/* Barra de Filtros */}
+      {/* Barra de Filtros en orden: 1. En Vivo, 2. Por Jugar, 3. Finalizados, 4. Todos */}
       <div className="flex flex-wrap items-center gap-2 mb-6 pb-2 border-b border-white/5">
+        {/* 1° En Vivo */}
         <button
-          onClick={() => setActiveFilter('SCHEDULED')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            activeFilter === 'SCHEDULED'
-              ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/25'
-              : 'bg-slate-900/80 text-slate-400 hover:text-sky-400 hover:bg-slate-800'
-          }`}
-        >
-          <Calendar className="w-3.5 h-3.5" />
-          <span>Por Jugar</span>
-          <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${
-            activeFilter === 'SCHEDULED' ? 'bg-slate-950 text-sky-400' : 'bg-slate-800 text-slate-400'
-          }`}>
-            {counts.scheduled}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveFilter('LIVE')}
+          onClick={() => handleFilterClick('LIVE')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeFilter === 'LIVE'
               ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/25 glow-emerald'
@@ -130,8 +182,27 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
           </span>
         </button>
 
+        {/* 2° Por Jugar */}
         <button
-          onClick={() => setActiveFilter('FINISHED')}
+          onClick={() => handleFilterClick('SCHEDULED')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            activeFilter === 'SCHEDULED'
+              ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/25'
+              : 'bg-slate-900/80 text-slate-400 hover:text-sky-400 hover:bg-slate-800'
+          }`}
+        >
+          <Calendar className="w-3.5 h-3.5" />
+          <span>Por Jugar</span>
+          <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${
+            activeFilter === 'SCHEDULED' ? 'bg-slate-950 text-sky-400' : 'bg-slate-800 text-slate-400'
+          }`}>
+            {counts.scheduled}
+          </span>
+        </button>
+
+        {/* 3° Finalizados */}
+        <button
+          onClick={() => handleFilterClick('FINISHED')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeFilter === 'FINISHED'
               ? 'bg-slate-700 text-white shadow-md'
@@ -147,8 +218,9 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
           </span>
         </button>
 
+        {/* 4° Todos */}
         <button
-          onClick={() => setActiveFilter('ALL')}
+          onClick={() => handleFilterClick('ALL')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeFilter === 'ALL'
               ? 'bg-white text-slate-950 shadow-md shadow-white/10'
