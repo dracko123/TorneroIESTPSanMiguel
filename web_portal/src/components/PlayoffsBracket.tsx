@@ -283,6 +283,7 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
   const isWinner2 = bracketMatch.ganador_id && bracketMatch.ganador_id === bracketMatch.equipo_2_id;
 
   const isLive = linkedMatch?.estado === 'EN_VIVO';
+  const isHalftime = linkedMatch?.estado === 'ENTRETIEMPO';
   const hasPenalties = (linkedMatch?.penales_local ?? 0) > 0 || (linkedMatch?.penales_visita ?? 0) > 0;
 
   const hasScore = linkedMatch && linkedMatch.estado !== 'PROGRAMADO';
@@ -306,6 +307,8 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
           ? 'bg-gradient-to-b from-slate-900 via-amber-950/20 to-slate-950 border-amber-400/80 shadow-amber-500/15 ring-1 ring-amber-400/40'
           : isLive
           ? 'bg-gradient-to-b from-slate-900 via-emerald-950/20 to-slate-950 border-emerald-500/70 shadow-emerald-500/10 ring-1 ring-emerald-500/30'
+          : isHalftime
+          ? 'bg-gradient-to-b from-slate-900 via-amber-950/20 to-slate-950 border-amber-500/70 shadow-amber-500/10 ring-1 ring-amber-500/30'
           : 'bg-slate-900/90 border-white/10 hover:border-emerald-500/40 hover:bg-slate-900'
       }`}
     >
@@ -329,6 +332,10 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
           <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full ring-1 ring-emerald-500/40 animate-pulse">
             <Radio className="w-2.5 h-2.5" />
             VIVO{linkedMatch?.tiempo_en_vivo ? ` • ${linkedMatch.tiempo_en_vivo}` : ''}
+          </span>
+        ) : isHalftime ? (
+          <span className="flex items-center gap-1 text-[9px] font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full ring-1 ring-amber-500/40">
+            ENTRETIEMPO
           </span>
         ) : linkedMatch?.estado === 'FINALIZADO' ? (
           <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/5">

@@ -118,11 +118,11 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
           ) : (
             <div className="flex flex-col items-center">
               <div className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-xl bg-slate-950/80 border border-white/10 shadow-inner">
-                <span className={`text-2xl sm:text-3xl font-black font-scoreboard ${isLive ? 'text-emerald-400' : 'text-white'}`}>
+                <span className={`text-2xl sm:text-3xl font-black font-scoreboard ${isLive ? 'text-emerald-400' : isHalftime ? 'text-amber-400' : 'text-white'}`}>
                   {match.goles_local}
                 </span>
                 <span className="text-slate-600 font-bold">:</span>
-                <span className={`text-2xl sm:text-3xl font-black font-scoreboard ${isLive ? 'text-emerald-400' : 'text-white'}`}>
+                <span className={`text-2xl sm:text-3xl font-black font-scoreboard ${isLive ? 'text-emerald-400' : isHalftime ? 'text-amber-400' : 'text-white'}`}>
                   {match.goles_visita}
                 </span>
               </div>
