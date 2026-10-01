@@ -89,52 +89,57 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
       </div>
 
       {/* Duelo de equipos y Marcador central */}
-      <div className="py-4 grid grid-cols-7 items-center gap-2">
-        {/* Local (Col 1-3) */}
-        <div className="col-span-3 flex flex-col items-center text-center">
+      <div className="py-4 flex items-center justify-between gap-2 sm:gap-4">
+        {/* Local */}
+        <div className="flex-1 min-w-0 flex flex-col items-center text-center px-1">
           <TeamBadge
             name={localTeam.nombre}
             colorHex={localTeam.color_hex}
             logoUrl={localTeam.logo_url}
             size="lg"
-            className="mb-2"
+            className="mb-2 shrink-0"
           />
-          <span className="text-sm sm:text-base font-bold text-white line-clamp-2 leading-tight">
-            {localTeam.nombre}
-          </span>
+          <div className="min-h-[2.5rem] flex items-center justify-center w-full">
+            <span
+              className="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-tight break-words text-center"
+              title={localTeam.nombre}
+            >
+              {localTeam.nombre}
+            </span>
+          </div>
           {localTeam.grupo && (
-            <span className="text-[10px] text-slate-400 mt-0.5 font-medium">
+            <span className="text-[10px] text-slate-400 mt-1 font-medium px-2 py-0.5 rounded-full bg-white/5 inline-block">
               Grupo {localTeam.grupo}
             </span>
           )}
         </div>
 
-        {/* Marcador Central (Col 4) */}
-        <div className="col-span-1 flex flex-col items-center justify-center">
+        {/* Marcador Central */}
+        <div className="shrink-0 w-24 sm:w-28 flex flex-col items-center justify-center">
           {match.estado === 'PROGRAMADO' ? (
-            <div className="px-2 py-1 rounded bg-slate-900/80 border border-white/10 text-slate-400 font-scoreboard font-bold text-sm sm:text-base">
+            <div className="px-3.5 py-1.5 rounded-xl bg-slate-900/90 border border-white/10 text-slate-400 font-scoreboard font-bold text-sm sm:text-base tracking-wider shadow-inner">
               VS
             </div>
           ) : (
-            <div className="flex flex-col items-center">
-              <div className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-xl bg-slate-950/80 border border-white/10 shadow-inner">
-                <span className={`text-2xl sm:text-3xl font-black font-scoreboard ${isLive ? 'text-emerald-400' : isHalftime ? 'text-amber-400' : 'text-white'}`}>
+            <div className="flex flex-col items-center w-full">
+              <div className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-2 py-1.5 rounded-xl bg-slate-950/90 border border-white/10 shadow-inner">
+                <span className={`text-2xl sm:text-3xl font-black font-scoreboard tabular-nums ${isLive ? 'text-emerald-400' : isHalftime ? 'text-amber-400' : 'text-white'}`}>
                   {match.goles_local}
                 </span>
                 <span className="text-slate-600 font-bold">:</span>
-                <span className={`text-2xl sm:text-3xl font-black font-scoreboard ${isLive ? 'text-emerald-400' : isHalftime ? 'text-amber-400' : 'text-white'}`}>
+                <span className={`text-2xl sm:text-3xl font-black font-scoreboard tabular-nums ${isLive ? 'text-emerald-400' : isHalftime ? 'text-amber-400' : 'text-white'}`}>
                   {match.goles_visita}
                 </span>
               </div>
 
               {hasPenalties && (
-                <div className="mt-1 text-[10px] sm:text-xs text-amber-400 font-bold font-scoreboard tracking-wide">
+                <div className="mt-1.5 text-[10px] text-amber-400 font-bold font-scoreboard tracking-wide whitespace-nowrap bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
                   Pen: ({match.penales_local}) - ({match.penales_visita})
                 </div>
               )}
 
               {isWalkover && (
-                <div className="mt-1 text-[10px] text-rose-400 font-bold uppercase tracking-wider text-center">
+                <div className="mt-1.5 text-[9px] text-rose-400 font-bold uppercase tracking-wider text-center bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
                   {match.walkover === 'DOBLE'
                     ? 'Doble W.O.'
                     : (match.walkover === 'LOCAL' ? 'Gana Local W.O.' : 'Gana Visita W.O.')}
@@ -144,20 +149,25 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
           )}
         </div>
 
-        {/* Visita (Col 5-7) */}
-        <div className="col-span-3 flex flex-col items-center text-center">
+        {/* Visita */}
+        <div className="flex-1 min-w-0 flex flex-col items-center text-center px-1">
           <TeamBadge
             name={visitorTeam.nombre}
             colorHex={visitorTeam.color_hex}
             logoUrl={visitorTeam.logo_url}
             size="lg"
-            className="mb-2"
+            className="mb-2 shrink-0"
           />
-          <span className="text-sm sm:text-base font-bold text-white line-clamp-2 leading-tight">
-            {visitorTeam.nombre}
-          </span>
+          <div className="min-h-[2.5rem] flex items-center justify-center w-full">
+            <span
+              className="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-tight break-words text-center"
+              title={visitorTeam.nombre}
+            >
+              {visitorTeam.nombre}
+            </span>
+          </div>
           {visitorTeam.grupo && (
-            <span className="text-[10px] text-slate-400 mt-0.5 font-medium">
+            <span className="text-[10px] text-slate-400 mt-1 font-medium px-2 py-0.5 rounded-full bg-white/5 inline-block">
               Grupo {visitorTeam.grupo}
             </span>
           )}
