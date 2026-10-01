@@ -89,7 +89,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
       </div>
 
       {/* Duelo de equipos y Marcador central */}
-      <div className="py-4 flex items-center justify-between gap-2 sm:gap-4">
+      <div className="py-4 flex items-start justify-between gap-2 sm:gap-4">
         {/* Local */}
         <div className="flex-1 min-w-0 flex flex-col items-center text-center px-1">
           <TeamBadge
@@ -99,9 +99,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
             size="lg"
             className="mb-2 shrink-0"
           />
-          <div className="min-h-[2.5rem] flex items-center justify-center w-full">
+          <div className="w-full mt-0.5 flex items-start justify-center">
             <span
-              className="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-tight break-words text-center"
+              className="text-xs sm:text-[13px] font-bold text-white leading-snug break-words text-center w-full"
               title={localTeam.nombre}
             >
               {localTeam.nombre}
@@ -115,7 +115,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
         </div>
 
         {/* Marcador Central */}
-        <div className="shrink-0 w-24 sm:w-28 flex flex-col items-center justify-center">
+        <div className="shrink-0 w-24 sm:w-28 flex flex-col items-center justify-center pt-2">
           {match.estado === 'PROGRAMADO' ? (
             <div className="px-3.5 py-1.5 rounded-xl bg-slate-900/90 border border-white/10 text-slate-400 font-scoreboard font-bold text-sm sm:text-base tracking-wider shadow-inner">
               VS
@@ -158,9 +158,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
             size="lg"
             className="mb-2 shrink-0"
           />
-          <div className="min-h-[2.5rem] flex items-center justify-center w-full">
+          <div className="w-full mt-0.5 flex items-start justify-center">
             <span
-              className="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-tight break-words text-center"
+              className="text-xs sm:text-[13px] font-bold text-white leading-snug break-words text-center w-full"
               title={visitorTeam.nombre}
             >
               {visitorTeam.nombre}

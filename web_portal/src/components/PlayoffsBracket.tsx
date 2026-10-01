@@ -352,7 +352,7 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
       <div className="flex-1 p-2.5 flex flex-col justify-between gap-2 min-h-0">
         {/* Equipo 1 (primer orden) */}
         <div
-          className={`h-[44px] shrink-0 flex items-center justify-between px-3 py-1 rounded-xl transition-all duration-200 ${
+          className={`min-h-[44px] shrink-0 flex items-center justify-between px-3 py-1.5 rounded-xl transition-all duration-200 ${
             isWinner1
               ? 'bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/50 text-amber-100 font-bold shadow-sm ring-1 ring-amber-400/20'
               : 'bg-slate-950/50 border border-white/[0.06] text-slate-300 hover:bg-slate-900/60'
@@ -372,7 +372,7 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
               </div>
             )}
             <span
-              className={`truncate text-xs sm:text-[13px] leading-tight ${
+              className={`text-xs sm:text-[12.5px] leading-snug break-words ${
                 isWinner1 ? 'text-amber-200 font-bold' : 'text-slate-200 font-medium'
               }`}
               title={team1Name}
@@ -409,7 +409,7 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
 
         {/* Equipo 2 (segundo orden - con holgura y sin cortes) */}
         <div
-          className={`h-[44px] shrink-0 flex items-center justify-between px-3 py-1 rounded-xl transition-all duration-200 ${
+          className={`min-h-[44px] shrink-0 flex items-center justify-between px-3 py-1.5 rounded-xl transition-all duration-200 ${
             isWinner2
               ? 'bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/50 text-amber-100 font-bold shadow-sm ring-1 ring-amber-400/20'
               : 'bg-slate-950/50 border border-white/[0.06] text-slate-300 hover:bg-slate-900/60'
@@ -429,7 +429,7 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
               </div>
             )}
             <span
-              className={`truncate text-xs sm:text-[13px] leading-tight ${
+              className={`text-xs sm:text-[12.5px] leading-snug break-words ${
                 isWinner2 ? 'text-amber-200 font-bold' : 'text-slate-200 font-medium'
               }`}
               title={team2Name}
