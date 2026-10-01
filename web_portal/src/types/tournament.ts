@@ -49,6 +49,7 @@ export interface Match {
   estado: MatchStatus;
   arbitro_asignado: string;
   walkover?: 'NO' | 'LOCAL' | 'VISITA' | 'DOBLE';
+  tiempo_en_vivo?: string;
 }
 
 export interface BracketMatch {

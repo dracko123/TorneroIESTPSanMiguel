@@ -64,7 +64,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
           {isLive && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[11px] font-black uppercase tracking-wider">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-              EN VIVO
+              EN VIVO{match.tiempo_en_vivo ? ` • ${match.tiempo_en_vivo}` : ''}
             </span>
           )}
 

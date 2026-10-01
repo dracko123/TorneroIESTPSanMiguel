@@ -328,7 +328,7 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
         {isLive ? (
           <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full ring-1 ring-emerald-500/40 animate-pulse">
             <Radio className="w-2.5 h-2.5" />
-            VIVO
+            VIVO{linkedMatch?.tiempo_en_vivo ? ` • ${linkedMatch.tiempo_en_vivo}` : ''}
           </span>
         ) : linkedMatch?.estado === 'FINALIZADO' ? (
           <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/5">
