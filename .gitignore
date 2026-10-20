@@ -53,3 +53,14 @@ build/
 mobile_app/
 backend/
 MASTER_PLAN_ANTIGRAVITY.md
+
+# Seguridad — Archivos con credenciales (NUNCA publicar)
+.env
+**/.env
+*.env
+.env.*
+!.env.example
+
+# Documentos internos de IA / contexto local (no forman parte del código fuente)
+AGENTE_CONTEXTO.md
+*_CONTEXTO.md
