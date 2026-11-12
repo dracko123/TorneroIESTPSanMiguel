@@ -114,7 +114,7 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
     }
 
     return Array.from(countByDate.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
+      .sort(([a], [b]) => b.localeCompare(a))
       .map(([key, count]) => ({
         key,
         label: formatDateKeyLabel(key),
@@ -180,44 +180,22 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
       const timeA = getTime(a.fecha_hora);
       const timeB = getTime(b.fecha_hora);
 
-      // 1. Partidos Finalizados (Jugados): del más reciente al más antiguo (Descendente)
-      if (activeFilter === 'FINISHED') {
-        if (timeB !== timeA) return timeB - timeA;
-        return (b.id_partido || '').localeCompare(a.id_partido || '');
+      // Si estamos en la pestaña "Todos", priorizar por estado (En Vivo > Por Jugar > Finalizados)
+      if (activeFilter === 'ALL') {
+        const statusPriority: Record<string, number> = {
+          'EN_VIVO': 1,
+          'ENTRETIEMPO': 1,
+          'PROGRAMADO': 2,
+          'FINALIZADO': 3
+        };
+        const prioA = statusPriority[a.estado] || 4;
+        const prioB = statusPriority[b.estado] || 4;
+        if (prioA !== prioB) return prioA - prioB;
       }
 
-      // 2. Partidos Programados (Por Jugar): del más próximo al más lejano (Ascendente)
-      if (activeFilter === 'SCHEDULED') {
-        if (timeA !== timeB) return timeA - timeB;
-        return (a.id_partido || '').localeCompare(b.id_partido || '');
-      }
-
-      // 3. Partidos En Vivo: cronológico
-      if (activeFilter === 'LIVE') {
-        if (timeA !== timeB) return timeA - timeB;
-        return (a.id_partido || '').localeCompare(b.id_partido || '');
-      }
-
-      // 4. Pestaña "Todos": Prioridad por estado (En Vivo > Por Jugar > Finalizados)
-      const statusPriority: Record<string, number> = {
-        'EN_VIVO': 1,
-        'ENTRETIEMPO': 1,
-        'PROGRAMADO': 2,
-        'FINALIZADO': 3
-      };
-      const prioA = statusPriority[a.estado] || 4;
-      const prioB = statusPriority[b.estado] || 4;
-      if (prioA !== prioB) return prioA - prioB;
-
-      // Si ambos están finalizados en "Todos", el más reciente primero
-      if (a.estado === 'FINALIZADO') {
-        if (timeB !== timeA) return timeB - timeA;
-        return (b.id_partido || '').localeCompare(a.id_partido || '');
-      }
-
-      // Para los programados o en vivo en "Todos", cronológico normal
-      if (timeA !== timeB) return timeA - timeB;
-      return (a.id_partido || '').localeCompare(b.id_partido || '');
+      // Orden descendente por fecha/hora (de la fecha más actual a la más antigua)
+      if (timeB !== timeA) return timeB - timeA;
+      return (b.id_partido || '').localeCompare(a.id_partido || '');
     });
   }, [matches, activeFilter, phaseFilter, effectiveDateFilter]);
 
