@@ -50,6 +50,10 @@ function normalizeRound(ronda: string): string {
 
 function getMatchWinnerId(m: Match): string {
   if (m.estado !== 'FINALIZADO') return '';
+  const wo = (m.walkover || 'NO').toUpperCase().trim();
+  if (wo === 'LOCAL') return m.local_id;
+  if (wo === 'VISITA') return m.visita_id;
+  if (wo === 'DOBLE') return '';
   const gl = Number(m.goles_local) || 0;
   const gv = Number(m.goles_visita) || 0;
   const pl = Number(m.penales_local) || 0;
@@ -286,6 +290,19 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
   const isHalftime = linkedMatch?.estado === 'ENTRETIEMPO';
   const hasPenalties = (linkedMatch?.penales_local ?? 0) > 0 || (linkedMatch?.penales_visita ?? 0) > 0;
 
+  const walkoverVal = (linkedMatch?.walkover || 'NO').toUpperCase().trim();
+  const isWalkover = walkoverVal === 'LOCAL' || walkoverVal === 'VISITA' || walkoverVal === 'DOBLE';
+  const isWoWinner1 =
+    Boolean(bracketMatch.equipo_1_id) &&
+    ((walkoverVal === 'LOCAL' && linkedMatch?.local_id === bracketMatch.equipo_1_id) ||
+     (walkoverVal === 'VISITA' && linkedMatch?.visita_id === bracketMatch.equipo_1_id));
+  const isWoWinner2 =
+    Boolean(bracketMatch.equipo_2_id) &&
+    ((walkoverVal === 'LOCAL' && linkedMatch?.local_id === bracketMatch.equipo_2_id) ||
+     (walkoverVal === 'VISITA' && linkedMatch?.visita_id === bracketMatch.equipo_2_id));
+  const isWoLoser1 = isWalkover && !isWoWinner1 && Boolean(bracketMatch.equipo_1_id);
+  const isWoLoser2 = isWalkover && !isWoWinner2 && Boolean(bracketMatch.equipo_2_id);
+
   const hasScore = linkedMatch && linkedMatch.estado !== 'PROGRAMADO';
   const score1 = (linkedMatch && bracketMatch.equipo_1_id)
     ? (linkedMatch.local_id === bracketMatch.equipo_1_id ? linkedMatch.goles_local : (linkedMatch.visita_id === bracketMatch.equipo_1_id ? linkedMatch.goles_visita : null))
@@ -328,24 +345,31 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
           )}
         </span>
 
-        {isLive ? (
-          <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full ring-1 ring-emerald-500/40 animate-pulse">
-            <Radio className="w-2.5 h-2.5" />
-            VIVO{linkedMatch?.tiempo_en_vivo ? ` • ${linkedMatch.tiempo_en_vivo}` : ''}
-          </span>
-        ) : isHalftime ? (
-          <span className="flex items-center gap-1 text-[9px] font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full ring-1 ring-amber-500/40">
-            ENTRETIEMPO
-          </span>
-        ) : linkedMatch?.estado === 'FINALIZADO' ? (
-          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/5">
-            FINALIZADO
-          </span>
-        ) : (
-          <span className="text-[9px] text-slate-500 font-medium px-1.5 py-0.5 rounded bg-white/[0.03]">
-            POR JUGAR
-          </span>
-        )}
+        <div className="flex items-center gap-1">
+          {isWalkover && (
+            <span className="text-[8.5px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/40">
+              W.O.
+            </span>
+          )}
+          {isLive ? (
+            <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full ring-1 ring-emerald-500/40 animate-pulse">
+              <Radio className="w-2.5 h-2.5" />
+              VIVO{linkedMatch?.tiempo_en_vivo ? ` • ${linkedMatch.tiempo_en_vivo}` : ''}
+            </span>
+          ) : isHalftime ? (
+            <span className="flex items-center gap-1 text-[9px] font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full ring-1 ring-amber-500/40">
+              ENTRETIEMPO
+            </span>
+          ) : linkedMatch?.estado === 'FINALIZADO' ? (
+            <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/5">
+              FINALIZADO
+            </span>
+          ) : (
+            <span className="text-[9px] text-slate-500 font-medium px-1.5 py-0.5 rounded bg-white/[0.03]">
+              POR JUGAR
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Filas de Equipos y Marcadores con espacio óptimo vertical */}
@@ -355,6 +379,8 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
           className={`min-h-[44px] shrink-0 flex items-center justify-between px-3 py-1.5 rounded-xl transition-all duration-200 ${
             isWinner1
               ? 'bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/50 text-amber-100 font-bold shadow-sm ring-1 ring-amber-400/20'
+              : isWoLoser1
+              ? 'bg-slate-950/40 border border-rose-500/20 text-slate-500 opacity-55'
               : 'bg-slate-950/50 border border-white/[0.06] text-slate-300 hover:bg-slate-900/60'
           }`}
         >
@@ -373,7 +399,7 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
             )}
             <span
               className={`text-xs sm:text-[12.5px] leading-snug break-words ${
-                isWinner1 ? 'text-amber-200 font-bold' : 'text-slate-200 font-medium'
+                isWinner1 ? 'text-amber-200 font-bold' : isWoLoser1 ? 'text-slate-400 font-medium' : 'text-slate-200 font-medium'
               }`}
               title={team1Name}
             >
@@ -382,6 +408,16 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
+            {isWoWinner1 && (
+              <span className="text-[9px] text-emerald-300 font-black px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40">
+                GANÓ W.O.
+              </span>
+            )}
+            {isWoLoser1 && (
+              <span className="text-[9px] text-rose-400 font-bold px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-500/30">
+                AUSENTE
+              </span>
+            )}
             {pen1 !== null && (
               <span
                 className="text-[10px] text-amber-400 font-mono font-bold px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20"
@@ -412,6 +448,8 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
           className={`min-h-[44px] shrink-0 flex items-center justify-between px-3 py-1.5 rounded-xl transition-all duration-200 ${
             isWinner2
               ? 'bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/50 text-amber-100 font-bold shadow-sm ring-1 ring-amber-400/20'
+              : isWoLoser2
+              ? 'bg-slate-950/40 border border-rose-500/20 text-slate-500 opacity-55'
               : 'bg-slate-950/50 border border-white/[0.06] text-slate-300 hover:bg-slate-900/60'
           }`}
         >
@@ -430,7 +468,7 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
             )}
             <span
               className={`text-xs sm:text-[12.5px] leading-snug break-words ${
-                isWinner2 ? 'text-amber-200 font-bold' : 'text-slate-200 font-medium'
+                isWinner2 ? 'text-amber-200 font-bold' : isWoLoser2 ? 'text-slate-400 font-medium' : 'text-slate-200 font-medium'
               }`}
               title={team2Name}
             >
@@ -439,6 +477,16 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
+            {isWoWinner2 && (
+              <span className="text-[9px] text-emerald-300 font-black px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40">
+                GANÓ W.O.
+              </span>
+            )}
+            {isWoLoser2 && (
+              <span className="text-[9px] text-rose-400 font-bold px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-500/30">
+                AUSENTE
+              </span>
+            )}
             {pen2 !== null && (
               <span
                 className="text-[10px] text-amber-400 font-mono font-bold px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20"

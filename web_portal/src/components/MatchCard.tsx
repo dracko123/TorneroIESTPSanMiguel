@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, User, Calendar } from 'lucide-react';
+import { MapPin, User, Calendar, Trophy, XCircle, AlertTriangle } from 'lucide-react';
 import type { Match, Team } from '../types/tournament';
 import { TeamBadge } from './TeamBadge';
 
@@ -28,7 +28,14 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
   const isLive = match.estado === 'EN_VIVO';
   const isHalftime = match.estado === 'ENTRETIEMPO';
   const isFinished = match.estado === 'FINALIZADO';
-  const isWalkover = match.walkover && match.walkover !== 'NO';
+
+  const walkoverVal = (match.walkover || 'NO').toUpperCase().trim();
+  const isWalkover = walkoverVal === 'LOCAL' || walkoverVal === 'VISITA' || walkoverVal === 'DOBLE';
+  const isLocalWoWinner = walkoverVal === 'LOCAL';
+  const isVisitorWoWinner = walkoverVal === 'VISITA';
+  const isDoubleWo = walkoverVal === 'DOBLE';
+  const isLocalWoLoser = walkoverVal === 'VISITA' || walkoverVal === 'DOBLE';
+  const isVisitorWoLoser = walkoverVal === 'LOCAL' || walkoverVal === 'DOBLE';
 
   const formattedDate = match.fecha_hora ? new Date(match.fecha_hora).toLocaleDateString('es-ES', {
     weekday: 'short',
@@ -91,17 +98,32 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
       {/* Duelo de equipos y Marcador central */}
       <div className="py-4 flex items-start justify-between gap-2 sm:gap-4">
         {/* Local */}
-        <div className="flex-1 min-w-0 flex flex-col items-center text-center px-1">
-          <TeamBadge
-            name={localTeam.nombre}
-            colorHex={localTeam.color_hex}
-            logoUrl={localTeam.logo_url}
-            size="lg"
-            className="mb-2 shrink-0"
-          />
+        <div
+          className={`flex-1 min-w-0 flex flex-col items-center text-center px-1 transition-all ${
+            isLocalWoLoser ? 'opacity-50 grayscale-[40%]' : ''
+          }`}
+        >
+          <div
+            className={`mb-2 shrink-0 rounded-full ${
+              isLocalWoWinner ? 'ring-2 ring-emerald-400/80 shadow-lg shadow-emerald-500/20' : ''
+            }`}
+          >
+            <TeamBadge
+              name={localTeam.nombre}
+              colorHex={localTeam.color_hex}
+              logoUrl={localTeam.logo_url}
+              size="lg"
+            />
+          </div>
           <div className="w-full mt-0.5 flex items-start justify-center">
             <span
-              className="text-xs sm:text-[13px] font-bold text-white leading-snug break-words text-center w-full"
+              className={`text-xs sm:text-[13px] font-bold leading-snug break-words text-center w-full ${
+                isLocalWoWinner
+                  ? 'text-emerald-300'
+                  : isLocalWoLoser
+                  ? 'text-slate-400'
+                  : 'text-white'
+              }`}
               title={localTeam.nombre}
             >
               {localTeam.nombre}
@@ -110,6 +132,18 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
           {localTeam.grupo && (
             <span className="text-[10px] text-slate-400 mt-1 font-medium px-2 py-0.5 rounded-full bg-white/5 inline-block">
               Grupo {localTeam.grupo}
+            </span>
+          )}
+          {isLocalWoWinner && (
+            <span className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9.5px] font-black uppercase tracking-wider shadow-sm">
+              <Trophy className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+              <span>GANADOR W.O.</span>
+            </span>
+          )}
+          {isLocalWoLoser && (
+            <span className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[9.5px] font-bold uppercase tracking-wider">
+              <XCircle className="w-2.5 h-2.5 shrink-0" />
+              <span>{isDoubleWo ? 'AUSENTE W.O.' : 'NO SE PRESENTÓ'}</span>
             </span>
           )}
         </div>
@@ -123,11 +157,35 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
           ) : (
             <div className="flex flex-col items-center w-full">
               <div className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-2 py-1.5 rounded-xl bg-slate-950/90 border border-white/10 shadow-inner">
-                <span className={`text-2xl sm:text-3xl font-black font-scoreboard tabular-nums ${isLive ? 'text-emerald-400' : isHalftime ? 'text-amber-400' : 'text-white'}`}>
+                <span
+                  className={`text-2xl sm:text-3xl font-black font-scoreboard tabular-nums ${
+                    isLive
+                      ? 'text-emerald-400'
+                      : isHalftime
+                      ? 'text-amber-400'
+                      : isLocalWoWinner
+                      ? 'text-emerald-400'
+                      : isLocalWoLoser
+                      ? 'text-slate-500'
+                      : 'text-white'
+                  }`}
+                >
                   {match.goles_local}
                 </span>
                 <span className="text-slate-600 font-bold">:</span>
-                <span className={`text-2xl sm:text-3xl font-black font-scoreboard tabular-nums ${isLive ? 'text-emerald-400' : isHalftime ? 'text-amber-400' : 'text-white'}`}>
+                <span
+                  className={`text-2xl sm:text-3xl font-black font-scoreboard tabular-nums ${
+                    isLive
+                      ? 'text-emerald-400'
+                      : isHalftime
+                      ? 'text-amber-400'
+                      : isVisitorWoWinner
+                      ? 'text-emerald-400'
+                      : isVisitorWoLoser
+                      ? 'text-slate-500'
+                      : 'text-white'
+                  }`}
+                >
                   {match.goles_visita}
                 </span>
               </div>
@@ -139,10 +197,23 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
               )}
 
               {isWalkover && (
-                <div className="mt-1.5 text-[9px] text-rose-400 font-bold uppercase tracking-wider text-center bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
-                  {match.walkover === 'DOBLE'
-                    ? 'Doble W.O.'
-                    : (match.walkover === 'LOCAL' ? 'Gana Local W.O.' : 'Gana Visita W.O.')}
+                <div
+                  className={`mt-1.5 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-center px-2 py-0.5 rounded-full border whitespace-nowrap ${
+                    isDoubleWo
+                      ? 'text-rose-400 bg-rose-500/15 border-rose-500/30'
+                      : 'text-emerald-300 bg-emerald-500/15 border-emerald-500/35'
+                  }`}
+                >
+                  {isDoubleWo ? (
+                    <>
+                      <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
+                      <span>DOBLE W.O.</span>
+                    </>
+                  ) : isLocalWoWinner ? (
+                    <span>◀ GANADOR W.O.</span>
+                  ) : (
+                    <span>GANADOR W.O. ▶</span>
+                  )}
                 </div>
               )}
             </div>
@@ -150,17 +221,32 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
         </div>
 
         {/* Visita */}
-        <div className="flex-1 min-w-0 flex flex-col items-center text-center px-1">
-          <TeamBadge
-            name={visitorTeam.nombre}
-            colorHex={visitorTeam.color_hex}
-            logoUrl={visitorTeam.logo_url}
-            size="lg"
-            className="mb-2 shrink-0"
-          />
+        <div
+          className={`flex-1 min-w-0 flex flex-col items-center text-center px-1 transition-all ${
+            isVisitorWoLoser ? 'opacity-50 grayscale-[40%]' : ''
+          }`}
+        >
+          <div
+            className={`mb-2 shrink-0 rounded-full ${
+              isVisitorWoWinner ? 'ring-2 ring-emerald-400/80 shadow-lg shadow-emerald-500/20' : ''
+            }`}
+          >
+            <TeamBadge
+              name={visitorTeam.nombre}
+              colorHex={visitorTeam.color_hex}
+              logoUrl={visitorTeam.logo_url}
+              size="lg"
+            />
+          </div>
           <div className="w-full mt-0.5 flex items-start justify-center">
             <span
-              className="text-xs sm:text-[13px] font-bold text-white leading-snug break-words text-center w-full"
+              className={`text-xs sm:text-[13px] font-bold leading-snug break-words text-center w-full ${
+                isVisitorWoWinner
+                  ? 'text-emerald-300'
+                  : isVisitorWoLoser
+                  ? 'text-slate-400'
+                  : 'text-white'
+              }`}
               title={visitorTeam.nombre}
             >
               {visitorTeam.nombre}
@@ -169,6 +255,18 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
           {visitorTeam.grupo && (
             <span className="text-[10px] text-slate-400 mt-1 font-medium px-2 py-0.5 rounded-full bg-white/5 inline-block">
               Grupo {visitorTeam.grupo}
+            </span>
+          )}
+          {isVisitorWoWinner && (
+            <span className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9.5px] font-black uppercase tracking-wider shadow-sm">
+              <Trophy className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+              <span>GANADOR W.O.</span>
+            </span>
+          )}
+          {isVisitorWoLoser && (
+            <span className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[9.5px] font-bold uppercase tracking-wider">
+              <XCircle className="w-2.5 h-2.5 shrink-0" />
+              <span>{isDoubleWo ? 'AUSENTE W.O.' : 'NO SE PRESENTÓ'}</span>
             </span>
           )}
         </div>
