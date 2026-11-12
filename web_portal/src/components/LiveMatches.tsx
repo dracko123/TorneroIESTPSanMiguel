@@ -1,9 +1,36 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import type { Match, Team } from '../types/tournament';
 import { MatchCard } from './MatchCard';
-import { Calendar, CheckCircle, Radio, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, CheckCircle, Radio, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 6;
+
+/** Extrae la clave local YYYY-MM-DD de un string de fecha/hora */
+function getMatchDateKey(dateStr?: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Formatea una clave YYYY-MM-DD en etiqueta legible en español (ej. "Jue, 15 oct") */
+function formatDateKeyLabel(dateKey: string): string {
+  const parts = dateKey.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return dateKey;
+  const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+  const todayKey = getMatchDateKey(new Date().toISOString());
+
+  const formatted = dateObj.toLocaleDateString('es-ES', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+  const clean = formatted.charAt(0).toUpperCase() + formatted.slice(1).replace(/\./g, '');
+  return dateKey === todayKey ? `Hoy • ${clean}` : clean;
+}
 
 interface LiveMatchesProps {
   matches: Match[];
@@ -13,8 +40,12 @@ interface LiveMatchesProps {
 export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'LIVE' | 'SCHEDULED' | 'FINISHED'>('LIVE');
   const [phaseFilter, setPhaseFilter] = useState<string>('ALL');
+  const [dateFilter, setDateFilter] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const userInteractedRef = useRef<boolean>(false);
+
+  // El filtro por fecha solo aplica en Por Jugar, Finalizados y Todos (NO en En Vivo)
+  const isDateFilterApplicable = activeFilter !== 'LIVE';
 
   // Selección inteligente al cargar los partidos si el usuario no ha interactuado manualmente
   useEffect(() => {
@@ -40,6 +71,11 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
     setCurrentPage(1);
   };
 
+  const handleDateChange = (dateKey: string) => {
+    setDateFilter(dateKey);
+    setCurrentPage(1);
+  };
+
   // Mapeo rápido de id_equipo -> Team para no hacer finds repetidos
   const teamsMap = useMemo(() => {
     const map = new Map<string, Team>();
@@ -56,15 +92,54 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
     return Array.from(set);
   }, [matches]);
 
-  // Contadores
+  // Fechas únicas con partidos disponibles (ordenadas cronológicamente)
+  const availableDates = useMemo(() => {
+    const countByDate = new Map<string, number>();
+    matches.forEach(m => {
+      if (phaseFilter !== 'ALL' && m.fase !== phaseFilter) return;
+      if (activeFilter === 'SCHEDULED' && m.estado !== 'PROGRAMADO') return;
+      if (activeFilter === 'FINISHED' && m.estado !== 'FINALIZADO') return;
+      const key = getMatchDateKey(m.fecha_hora);
+      if (key) {
+        countByDate.set(key, (countByDate.get(key) || 0) + 1);
+      }
+    });
+
+    // Si el usuario tenía seleccionada una fecha y aún existe en el torneo general, mantenerla en la lista
+    if (dateFilter !== 'ALL' && !countByDate.has(dateFilter)) {
+      const existsInTournament = matches.some(m => getMatchDateKey(m.fecha_hora) === dateFilter);
+      if (existsInTournament) {
+        countByDate.set(dateFilter, 0);
+      }
+    }
+
+    return Array.from(countByDate.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, count]) => ({
+        key,
+        label: formatDateKeyLabel(key),
+        count,
+      }));
+  }, [matches, phaseFilter, activeFilter, dateFilter]);
+
+  // El filtro de fecha efectivo es 'ALL' cuando estamos en la pestaña "En Vivo"
+  const effectiveDateFilter = isDateFilterApplicable ? dateFilter : 'ALL';
+
+  // Contadores (En Vivo nunca se filtra por fecha; Por Jugar, Finalizados y Todos sí)
   const counts = useMemo(() => {
+    const phaseFiltered = matches.filter(m => phaseFilter === 'ALL' || m.fase === phaseFilter);
+    const dateAndPhaseFiltered = phaseFiltered.filter(m => {
+      if (effectiveDateFilter === 'ALL') return true;
+      return getMatchDateKey(m.fecha_hora) === effectiveDateFilter;
+    });
+
     return {
-      all: matches.length,
-      live: matches.filter(m => m.estado === 'EN_VIVO' || m.estado === 'ENTRETIEMPO').length,
-      scheduled: matches.filter(m => m.estado === 'PROGRAMADO').length,
-      finished: matches.filter(m => m.estado === 'FINALIZADO').length
+      all: dateAndPhaseFiltered.length,
+      live: phaseFiltered.filter(m => m.estado === 'EN_VIVO' || m.estado === 'ENTRETIEMPO').length,
+      scheduled: dateAndPhaseFiltered.filter(m => m.estado === 'PROGRAMADO').length,
+      finished: dateAndPhaseFiltered.filter(m => m.estado === 'FINALIZADO').length,
     };
-  }, [matches]);
+  }, [matches, phaseFilter, effectiveDateFilter]);
 
   // Filtrado y ordenamiento de partidos
   const filteredMatches = useMemo(() => {
@@ -74,10 +149,18 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
         return false;
       }
 
-      // Filtro de estado
+      // Filtro de estado: En Vivo ignora el filtro por fecha
       if (activeFilter === 'LIVE') {
         return m.estado === 'EN_VIVO' || m.estado === 'ENTRETIEMPO';
       }
+
+      // Filtro por fecha (aplica únicamente en Por Jugar, Finalizados y Todos)
+      if (effectiveDateFilter !== 'ALL') {
+        if (getMatchDateKey(m.fecha_hora) !== effectiveDateFilter) {
+          return false;
+        }
+      }
+
       if (activeFilter === 'SCHEDULED') {
         return m.estado === 'PROGRAMADO';
       }
@@ -136,7 +219,7 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
       if (timeA !== timeB) return timeA - timeB;
       return (a.id_partido || '').localeCompare(b.id_partido || '');
     });
-  }, [matches, activeFilter, phaseFilter]);
+  }, [matches, activeFilter, phaseFilter, effectiveDateFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredMatches.length / ITEMS_PER_PAGE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -196,26 +279,64 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
           </p>
         </div>
 
-        {/* Selector de Fases */}
-        {phases.length > 1 && (
-          <div className="flex items-center space-x-2">
-            <label className="text-xs text-slate-400 font-medium">Fase:</label>
-            <select
-              value={phaseFilter}
-              onChange={(e) => handlePhaseChange(e.target.value)}
-              className="px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+        {/* Selectores superiores: Fecha (solo en Por Jugar, Finalizados y Todos) y Fase */}
+        <div className="flex flex-wrap items-center gap-3">
+          {isDateFilterApplicable && availableDates.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <label className="text-xs text-slate-400 font-medium flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Fecha:</span>
+              </label>
+              <select
+                value={dateFilter}
+                onChange={(e) => handleDateChange(e.target.value)}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+              >
+                <option value="ALL">Todas las Fechas</option>
+                {availableDates.map(d => (
+                  <option key={d.key} value={d.key}>
+                    {d.label} ({d.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {phases.length > 1 && (
+            <div className="flex items-center space-x-2">
+              <label className="text-xs text-slate-400 font-medium">Fase:</label>
+              <select
+                value={phaseFilter}
+                onChange={(e) => handlePhaseChange(e.target.value)}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+              >
+                <option value="ALL">Todas las Fases</option>
+                {phases.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {((isDateFilterApplicable && dateFilter !== 'ALL') || phaseFilter !== 'ALL') && (
+            <button
+              onClick={() => {
+                setDateFilter('ALL');
+                setPhaseFilter('ALL');
+                setCurrentPage(1);
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-[11px] font-bold text-rose-300 transition-all"
+              title="Restablecer filtros de fecha y fase"
             >
-              <option value="ALL">Todas las Fases</option>
-              {phases.map(p => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </div>
-        )}
+              <X className="w-3 h-3" />
+              <span>Limpiar</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Barra de Filtros en orden: 1. En Vivo, 2. Por Jugar, 3. Finalizados, 4. Todos */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-2 border-b border-white/5">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-2 border-b border-white/5">
         <div className="flex flex-wrap items-center gap-2">
           {/* 1° En Vivo */}
           <button
@@ -305,14 +426,64 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
         )}
       </div>
 
+      {/* Chips rápidos de Fechas (Solo visibles en Por Jugar, Finalizados y Todos cuando hay >1 fecha) */}
+      {isDateFilterApplicable && availableDates.length > 1 && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-5 scrollbar-thin">
+          <button
+            onClick={() => handleDateChange('ALL')}
+            className={`px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all border flex items-center gap-1.5 ${
+              dateFilter === 'ALL'
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm'
+                : 'bg-slate-900/60 text-slate-400 border-white/10 hover:text-white hover:bg-slate-800/80'
+            }`}
+          >
+            <Calendar className="w-3 h-3" />
+            <span>Todas las fechas</span>
+          </button>
+
+          {availableDates.map(d => (
+            <button
+              key={d.key}
+              onClick={() => handleDateChange(d.key)}
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all border flex items-center gap-1.5 ${
+                dateFilter === d.key
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm'
+                  : 'bg-slate-900/60 text-slate-400 border-white/10 hover:text-white hover:bg-slate-800/80'
+              }`}
+            >
+              <span>{d.label}</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-md text-[10px] ${
+                  dateFilter === d.key
+                    ? 'bg-emerald-500/30 text-emerald-200'
+                    : 'bg-white/5 text-slate-400'
+                }`}
+              >
+                {d.count}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Cuadrícula de Tarjetas de Partido (Máximo 6 por página) */}
       {filteredMatches.length === 0 ? (
         <div className="rounded-2xl glass-panel p-12 text-center">
           <Calendar className="w-12 h-12 text-slate-600 mx-auto mb-3" />
           <h3 className="text-lg font-bold text-white">No hay partidos en este filtro</h3>
           <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-            Selecciona otra pestaña o cambia el filtro de fase para ver los demás encuentros del torneo.
+            {isDateFilterApplicable && dateFilter !== 'ALL'
+              ? 'No se encontraron partidos para la fecha seleccionada en esta pestaña.'
+              : 'Selecciona otra pestaña o cambia el filtro de fase para ver los demás encuentros del torneo.'}
           </p>
+          {isDateFilterApplicable && dateFilter !== 'ALL' && (
+            <button
+              onClick={() => handleDateChange('ALL')}
+              className="mt-4 px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all"
+            >
+              Mostrar todas las fechas
+            </button>
+          )}
         </div>
       ) : (
         <>
