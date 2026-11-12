@@ -263,6 +263,19 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
     }
   };
 
+  // Navegación con flechas ‹ › entre "Todas las fechas" y cada día disponible
+  const dateOptionsOrder = useMemo(
+    () => ['ALL', ...availableDates.map(d => d.key)],
+    [availableDates]
+  );
+
+  const handleStepDate = (delta: -1 | 1) => {
+    if (dateOptionsOrder.length <= 1) return;
+    const currentIdx = Math.max(0, dateOptionsOrder.indexOf(dateFilter));
+    const nextIdx = (currentIdx + delta + dateOptionsOrder.length) % dateOptionsOrder.length;
+    handleDateChange(dateOptionsOrder[nextIdx]);
+  };
+
   return (
     <section id="partidos" className="mb-14 scroll-mt-24">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
@@ -279,64 +292,26 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
           </p>
         </div>
 
-        {/* Selectores superiores: Fecha (solo en Por Jugar, Finalizados y Todos) y Fase */}
-        <div className="flex flex-wrap items-center gap-3">
-          {isDateFilterApplicable && availableDates.length > 0 && (
-            <div className="flex items-center space-x-2">
-              <label className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Fecha:</span>
-              </label>
-              <select
-                value={dateFilter}
-                onChange={(e) => handleDateChange(e.target.value)}
-                className="px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="ALL">Todas las Fechas</option>
-                {availableDates.map(d => (
-                  <option key={d.key} value={d.key}>
-                    {d.label} ({d.count})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {phases.length > 1 && (
-            <div className="flex items-center space-x-2">
-              <label className="text-xs text-slate-400 font-medium">Fase:</label>
-              <select
-                value={phaseFilter}
-                onChange={(e) => handlePhaseChange(e.target.value)}
-                className="px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="ALL">Todas las Fases</option>
-                {phases.map(p => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {((isDateFilterApplicable && dateFilter !== 'ALL') || phaseFilter !== 'ALL') && (
-            <button
-              onClick={() => {
-                setDateFilter('ALL');
-                setPhaseFilter('ALL');
-                setCurrentPage(1);
-              }}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-[11px] font-bold text-rose-300 transition-all"
-              title="Restablecer filtros de fecha y fase"
+        {/* Selector de Fases */}
+        {phases.length > 1 && (
+          <div className="flex items-center space-x-2">
+            <label className="text-xs text-slate-400 font-medium">Fase:</label>
+            <select
+              value={phaseFilter}
+              onChange={(e) => handlePhaseChange(e.target.value)}
+              className="px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
             >
-              <X className="w-3 h-3" />
-              <span>Limpiar</span>
-            </button>
-          )}
-        </div>
+              <option value="ALL">Todas las Fases</option>
+              {phases.map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
-      {/* Barra de Filtros en orden: 1. En Vivo, 2. Por Jugar, 3. Finalizados, 4. Todos */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-2 border-b border-white/5">
+      {/* Barra única: Pestañas (1. En Vivo, 2. Por Jugar, 3. Finalizados, 4. Todos) + Selector compacto ‹ Fecha › */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-2.5 border-b border-white/5">
         <div className="flex flex-wrap items-center gap-2">
           {/* 1° En Vivo */}
           <button
@@ -410,61 +385,71 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
           </button>
         </div>
 
-        {/* Resumen rápido de paginación arriba */}
-        {filteredMatches.length > 0 && (
-          <div className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
-            <span>
-              Mostrando <strong className="text-slate-200">{startIndex + 1}–{endIndex}</strong> de{' '}
-              <strong className="text-slate-200">{filteredMatches.length}</strong> partidos
-            </span>
-            {totalPages > 1 && (
-              <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-emerald-400 font-bold">
-                Pág. {safeCurrentPage}/{totalPages}
-              </span>
+        {/* Selector Único Compacto con Flechas ‹ Fecha › (Solo en Por Jugar, Finalizados y Todos) */}
+        {isDateFilterApplicable && availableDates.length > 0 && (
+          <div
+            className={`inline-flex items-center rounded-xl border transition-all ${
+              dateFilter !== 'ALL'
+                ? 'bg-emerald-500/10 border-emerald-500/40 shadow-sm shadow-emerald-500/10'
+                : 'bg-slate-900/90 border-white/10'
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => handleStepDate(-1)}
+              className="p-2 text-slate-400 hover:text-white transition-colors"
+              title="Fecha anterior"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+
+            <div className="relative flex items-center gap-1.5 px-1.5 py-1.5">
+              <Calendar
+                className={`w-3.5 h-3.5 shrink-0 ${
+                  dateFilter !== 'ALL' ? 'text-emerald-400' : 'text-slate-400'
+                }`}
+              />
+              <select
+                value={dateFilter}
+                onChange={(e) => handleDateChange(e.target.value)}
+                className={`bg-transparent text-xs font-bold focus:outline-none cursor-pointer pr-1 ${
+                  dateFilter !== 'ALL' ? 'text-emerald-300' : 'text-slate-200'
+                }`}
+                aria-label="Filtrar por fecha"
+              >
+                <option value="ALL" className="bg-slate-900 text-slate-200">
+                  Todas las fechas
+                </option>
+                {availableDates.map(d => (
+                  <option key={d.key} value={d.key} className="bg-slate-900 text-slate-200">
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {dateFilter !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => handleDateChange('ALL')}
+                className="p-1.5 text-emerald-400/80 hover:text-rose-400 transition-colors"
+                title="Volver a todas las fechas"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => handleStepDate(1)}
+              className="p-2 text-slate-400 hover:text-white transition-colors"
+              title="Fecha siguiente"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
       </div>
-
-      {/* Chips rápidos de Fechas (Solo visibles en Por Jugar, Finalizados y Todos cuando hay >1 fecha) */}
-      {isDateFilterApplicable && availableDates.length > 1 && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-5 scrollbar-thin">
-          <button
-            onClick={() => handleDateChange('ALL')}
-            className={`px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all border flex items-center gap-1.5 ${
-              dateFilter === 'ALL'
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm'
-                : 'bg-slate-900/60 text-slate-400 border-white/10 hover:text-white hover:bg-slate-800/80'
-            }`}
-          >
-            <Calendar className="w-3 h-3" />
-            <span>Todas las fechas</span>
-          </button>
-
-          {availableDates.map(d => (
-            <button
-              key={d.key}
-              onClick={() => handleDateChange(d.key)}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all border flex items-center gap-1.5 ${
-                dateFilter === d.key
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm'
-                  : 'bg-slate-900/60 text-slate-400 border-white/10 hover:text-white hover:bg-slate-800/80'
-              }`}
-            >
-              <span>{d.label}</span>
-              <span
-                className={`px-1.5 py-0.2 rounded-md text-[10px] ${
-                  dateFilter === d.key
-                    ? 'bg-emerald-500/30 text-emerald-200'
-                    : 'bg-white/5 text-slate-400'
-                }`}
-              >
-                {d.count}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Cuadrícula de Tarjetas de Partido (Máximo 6 por página) */}
       {filteredMatches.length === 0 ? (
