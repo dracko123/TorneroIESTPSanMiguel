@@ -447,10 +447,10 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap, players =
                         {ev.tipo === 'CAMBIO'
                           ? `Sale #${ev.dorsal_sale ?? ''} ${ev.nombre_sale || ''} ↔ Entra #${ev.dorsal_entra ?? ''} ${ev.nombre_entra || ''}`
                           : ev.tipo === 'INGRESO'
-                          ? `Entra #${ev.dorsal_entra ?? ev.dorsal ?? ''} ${ev.nombre_entra || ev.nombre || ''}`
-                          : ev.tipo === 'SALIDA'
-                          ? `Sale #${ev.dorsal_sale ?? ev.dorsal ?? ''} ${ev.nombre_sale || ev.nombre || ''}`
-                          : `#${ev.dorsal ?? ''} ${ev.nombre || ''}`}
+                            ? `Entra #${ev.dorsal_entra ?? ev.dorsal ?? ''} ${ev.nombre_entra || ev.nombre || ''}`
+                            : ev.tipo === 'SALIDA'
+                              ? `Sale #${ev.dorsal_sale ?? ev.dorsal ?? ''} ${ev.nombre_sale || ev.nombre || ''}`
+                              : `#${ev.dorsal ?? ''} ${ev.nombre || ''}`}
                       </span>
                     </div>
                   </div>

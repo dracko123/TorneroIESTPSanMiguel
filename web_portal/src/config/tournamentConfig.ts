@@ -14,7 +14,7 @@ export const TOURNAMENT_CONFIG = {
   /**
    * URL de la Web App desplegada de Google Apps Script (backend/Code.js).
    */
-  APPSCRIPT_URL: import.meta.env.VITE_APPSCRIPT_URL || 'https://script.google.com/macros/s/AKfycbz2Yp3q-s08e6VoaitcP_iLO0w_cGROU_E_K6FfLxU1r2Z1ebKRK9R8SqLaFQ5X39gX/exec',
+  APPSCRIPT_URL: import.meta.env.VITE_APPSCRIPT_URL || 'https://script.google.com/macros/s/AKfycbwME8YfWEVRbynxhXcRhwUHDnJzdiuzCS7v80ZmeOWUX0Pn6MtQwJL7VL8eiUgQVfYU/exec',
 
   /**
    * ID del Google Spreadsheet del torneo.
