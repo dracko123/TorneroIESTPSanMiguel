@@ -21,30 +21,39 @@ const HEADER_H = 48;  // Altura del encabezado de ronda (px)
 
 // ─── Orden y Etiquetas de Rondas ─────────────────────────────────────────────
 
-const ROUND_ORDER = ['OCTAVOS', 'CUARTOS', 'SEMIFINAL', 'FINAL'] as const;
+const ROUND_ORDER = ['TREINTAIDOSAVOS', 'DIECISEISAVOS', 'OCTAVOS', 'CUARTOS', 'SEMIFINAL', 'FINAL'] as const;
 
 const ROUND_LABELS: Record<string, string> = {
+  TREINTAIDOSAVOS: 'Treintaidosavos de Final',
+  DIECISEISAVOS: 'Dieciseisavos de Final',
   OCTAVOS: 'Octavos de Final',
   CUARTOS: 'Cuartos de Final',
   SEMIFINAL: 'Semifinales',
+  TERCER_PUESTO: '3.º y 4.º Puesto',
   FINAL: 'Gran Final',
 };
 
 const ROUND_THEMES: Record<string, { text: string; badgeBg: string; border: string; glow: string; connColor: string }> = {
-  OCTAVOS:   { text: 'text-sky-400',     badgeBg: 'bg-sky-500/10',     border: 'border-sky-500/30',     glow: '#38bdf8', connColor: '#38bdf8' },
-  CUARTOS:   { text: 'text-indigo-400',  badgeBg: 'bg-indigo-500/10',  border: 'border-indigo-500/30',  glow: '#818cf8', connColor: '#818cf8' },
+  TREINTAIDOSAVOS: { text: 'text-cyan-400', badgeBg: 'bg-cyan-500/10', border: 'border-cyan-500/30', glow: '#22d3ee', connColor: '#22d3ee' },
+  DIECISEISAVOS: { text: 'text-teal-400', badgeBg: 'bg-teal-500/10', border: 'border-teal-500/30', glow: '#2dd4bf', connColor: '#2dd4bf' },
+  OCTAVOS: { text: 'text-sky-400', badgeBg: 'bg-sky-500/10', border: 'border-sky-500/30', glow: '#38bdf8', connColor: '#38bdf8' },
+  CUARTOS: { text: 'text-indigo-400', badgeBg: 'bg-indigo-500/10', border: 'border-indigo-500/30', glow: '#818cf8', connColor: '#818cf8' },
   SEMIFINAL: { text: 'text-emerald-400', badgeBg: 'bg-emerald-500/10', border: 'border-emerald-500/30', glow: '#10b981', connColor: '#10b981' },
-  FINAL:     { text: 'text-amber-400',   badgeBg: 'bg-amber-500/15',   border: 'border-amber-500/50',   glow: '#f59e0b', connColor: '#f59e0b' },
+  TERCER_PUESTO: { text: 'text-orange-400', badgeBg: 'bg-orange-500/10', border: 'border-orange-500/30', glow: '#fb923c', connColor: '#fb923c' },
+  FINAL: { text: 'text-amber-400', badgeBg: 'bg-amber-500/15', border: 'border-amber-500/50', glow: '#f59e0b', connColor: '#f59e0b' },
 };
 
 // ─── Helpers de Normalización y Árbol ─────────────────────────────────────────
 
 function normalizeRound(ronda: string): string {
   const r = (ronda || '').toUpperCase().trim();
-  if (r.includes('OCTAVO')) return 'OCTAVOS';
-  if (r.includes('CUARTO')) return 'CUARTOS';
+  if (r.includes('TREINTAIDOS') || r.includes('32')) return 'TREINTAIDOSAVOS';
+  if (r.includes('DIECISEIS') || r.includes('16')) return 'DIECISEISAVOS';
+  if (r.includes('OCTAVO') || r.includes('8VO')) return 'OCTAVOS';
+  if (r.includes('CUARTO') && !r.includes('PUESTO') && !r.includes('LUGAR')) return 'CUARTOS';
   if (r.includes('SEMI')) return 'SEMIFINAL';
-  if (r.includes('FINAL') && !r.includes('TERCER') && !r.includes('3')) return 'FINAL';
+  if (r.includes('TERCER') || r.includes('3ER') || r.includes('CUARTO PUESTO') || r.includes('4TO PUESTO')) return 'TERCER_PUESTO';
+  if (r.includes('FINAL')) return 'FINAL';
   return r;
 }
 
@@ -67,7 +76,18 @@ function getMatchWinnerId(m: Match): string {
 
 function isPlayoffMatch(m: Match): boolean {
   const f = (m.fase || '').toUpperCase();
-  return !f.includes('GRUPO') && (f.includes('OCTAVO') || f.includes('CUARTO') || f.includes('SEMI') || f.includes('FINAL'));
+  return !f.includes('GRUPO') && (
+    f.includes('TREINTAIDOS') ||
+    f.includes('32') ||
+    f.includes('DIECISEIS') ||
+    f.includes('16') ||
+    f.includes('OCTAVO') ||
+    f.includes('CUARTO') ||
+    f.includes('SEMI') ||
+    f.includes('TERCER') ||
+    f.includes('3ER') ||
+    f.includes('FINAL')
+  );
 }
 
 /**
@@ -295,11 +315,11 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
   const isWoWinner1 =
     Boolean(bracketMatch.equipo_1_id) &&
     ((walkoverVal === 'LOCAL' && linkedMatch?.local_id === bracketMatch.equipo_1_id) ||
-     (walkoverVal === 'VISITA' && linkedMatch?.visita_id === bracketMatch.equipo_1_id));
+      (walkoverVal === 'VISITA' && linkedMatch?.visita_id === bracketMatch.equipo_1_id));
   const isWoWinner2 =
     Boolean(bracketMatch.equipo_2_id) &&
     ((walkoverVal === 'LOCAL' && linkedMatch?.local_id === bracketMatch.equipo_2_id) ||
-     (walkoverVal === 'VISITA' && linkedMatch?.visita_id === bracketMatch.equipo_2_id));
+      (walkoverVal === 'VISITA' && linkedMatch?.visita_id === bracketMatch.equipo_2_id));
   const isWoLoser1 = isWalkover && !isWoWinner1 && Boolean(bracketMatch.equipo_1_id);
   const isWoLoser2 = isWalkover && !isWoWinner2 && Boolean(bracketMatch.equipo_2_id);
 
@@ -319,22 +339,20 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
 
   return (
     <div
-      className={`w-full h-full flex flex-col rounded-2xl overflow-hidden border transition-all duration-300 hover:scale-[1.02] shadow-xl ${
-        isFinal
+      className={`w-full h-full flex flex-col rounded-2xl overflow-hidden border transition-all duration-300 hover:scale-[1.02] shadow-xl ${isFinal
           ? 'bg-gradient-to-b from-slate-900 via-amber-950/20 to-slate-950 border-amber-400/80 shadow-amber-500/15 ring-1 ring-amber-400/40'
           : isLive
-          ? 'bg-gradient-to-b from-slate-900 via-emerald-950/20 to-slate-950 border-emerald-500/70 shadow-emerald-500/10 ring-1 ring-emerald-500/30'
-          : isHalftime
-          ? 'bg-gradient-to-b from-slate-900 via-amber-950/20 to-slate-950 border-amber-500/70 shadow-amber-500/10 ring-1 ring-amber-500/30'
-          : 'bg-slate-900/90 border-white/10 hover:border-emerald-500/40 hover:bg-slate-900'
-      }`}
+            ? 'bg-gradient-to-b from-slate-900 via-emerald-950/20 to-slate-950 border-emerald-500/70 shadow-emerald-500/10 ring-1 ring-emerald-500/30'
+            : isHalftime
+              ? 'bg-gradient-to-b from-slate-900 via-amber-950/20 to-slate-950 border-amber-500/70 shadow-amber-500/10 ring-1 ring-amber-500/30'
+              : 'bg-slate-900/90 border-white/10 hover:border-emerald-500/40 hover:bg-slate-900'
+        }`}
     >
       {/* Cabecera de la Tarjeta */}
-      <div className={`h-[32px] shrink-0 flex items-center justify-between px-3.5 text-[10px] sm:text-[10.5px] font-mono border-b ${
-        isFinal
+      <div className={`h-[32px] shrink-0 flex items-center justify-between px-3.5 text-[10px] sm:text-[10.5px] font-mono border-b ${isFinal
           ? 'text-amber-300 border-amber-500/30 bg-amber-500/10 font-bold'
           : 'text-slate-400 border-white/5 bg-slate-950/70'
-      }`}>
+        }`}>
         <span className="font-bold flex items-center gap-1.5 tracking-wider">
           <span className="text-slate-500 font-normal">#</span>{bracketMatch.cruce_id}
           {isFinal && (
@@ -376,13 +394,12 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
       <div className="flex-1 p-2.5 flex flex-col justify-between gap-2 min-h-0">
         {/* Equipo 1 (primer orden) */}
         <div
-          className={`min-h-[44px] shrink-0 flex items-center justify-between px-3 py-1.5 rounded-xl transition-all duration-200 ${
-            isWinner1
+          className={`min-h-[44px] shrink-0 flex items-center justify-between px-3 py-1.5 rounded-xl transition-all duration-200 ${isWinner1
               ? 'bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/50 text-amber-100 font-bold shadow-sm ring-1 ring-amber-400/20'
               : isWoLoser1
-              ? 'bg-slate-950/40 border border-rose-500/20 text-slate-500 opacity-55'
-              : 'bg-slate-950/50 border border-white/[0.06] text-slate-300 hover:bg-slate-900/60'
-          }`}
+                ? 'bg-slate-950/40 border border-rose-500/20 text-slate-500 opacity-55'
+                : 'bg-slate-950/50 border border-white/[0.06] text-slate-300 hover:bg-slate-900/60'
+            }`}
         >
           <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
             {bracketMatch.equipo_1_id ? (
@@ -398,9 +415,8 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
               </div>
             )}
             <span
-              className={`text-xs sm:text-[12.5px] leading-snug break-words ${
-                isWinner1 ? 'text-amber-200 font-bold' : isWoLoser1 ? 'text-slate-400 font-medium' : 'text-slate-200 font-medium'
-              }`}
+              className={`text-xs sm:text-[12.5px] leading-snug break-words ${isWinner1 ? 'text-amber-200 font-bold' : isWoLoser1 ? 'text-slate-400 font-medium' : 'text-slate-200 font-medium'
+                }`}
               title={team1Name}
             >
               {team1Name}
@@ -428,11 +444,10 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
             )}
             {hasScore && score1 !== null ? (
               <span
-                className={`font-mono font-black text-sm px-2 py-0.5 rounded-lg border min-w-[24px] text-center ${
-                  isWinner1
+                className={`font-mono font-black text-sm px-2 py-0.5 rounded-lg border min-w-[24px] text-center ${isWinner1
                     ? 'text-amber-300 bg-amber-950/70 border-amber-500/50 shadow-inner'
                     : 'text-slate-100 bg-black/50 border-white/10'
-                }`}
+                  }`}
               >
                 {score1}
               </span>
@@ -445,13 +460,12 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
 
         {/* Equipo 2 (segundo orden - con holgura y sin cortes) */}
         <div
-          className={`min-h-[44px] shrink-0 flex items-center justify-between px-3 py-1.5 rounded-xl transition-all duration-200 ${
-            isWinner2
+          className={`min-h-[44px] shrink-0 flex items-center justify-between px-3 py-1.5 rounded-xl transition-all duration-200 ${isWinner2
               ? 'bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/50 text-amber-100 font-bold shadow-sm ring-1 ring-amber-400/20'
               : isWoLoser2
-              ? 'bg-slate-950/40 border border-rose-500/20 text-slate-500 opacity-55'
-              : 'bg-slate-950/50 border border-white/[0.06] text-slate-300 hover:bg-slate-900/60'
-          }`}
+                ? 'bg-slate-950/40 border border-rose-500/20 text-slate-500 opacity-55'
+                : 'bg-slate-950/50 border border-white/[0.06] text-slate-300 hover:bg-slate-900/60'
+            }`}
         >
           <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
             {bracketMatch.equipo_2_id ? (
@@ -467,9 +481,8 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
               </div>
             )}
             <span
-              className={`text-xs sm:text-[12.5px] leading-snug break-words ${
-                isWinner2 ? 'text-amber-200 font-bold' : isWoLoser2 ? 'text-slate-400 font-medium' : 'text-slate-200 font-medium'
-              }`}
+              className={`text-xs sm:text-[12.5px] leading-snug break-words ${isWinner2 ? 'text-amber-200 font-bold' : isWoLoser2 ? 'text-slate-400 font-medium' : 'text-slate-200 font-medium'
+                }`}
               title={team2Name}
             >
               {team2Name}
@@ -497,11 +510,10 @@ const TreeCard: React.FC<TreeCardProps> = ({ bracketMatch, teamsMap, linkedMatch
             )}
             {hasScore && score2 !== null ? (
               <span
-                className={`font-mono font-black text-sm px-2 py-0.5 rounded-lg border min-w-[24px] text-center ${
-                  isWinner2
+                className={`font-mono font-black text-sm px-2 py-0.5 rounded-lg border min-w-[24px] text-center ${isWinner2
                     ? 'text-amber-300 bg-amber-950/70 border-amber-500/50 shadow-inner'
                     : 'text-slate-100 bg-black/50 border-white/10'
-                }`}
+                  }`}
               >
                 {score2}
               </span>
@@ -553,13 +565,13 @@ const ConnectorSVG: React.FC<ConnectorSVGProps> = ({
       </defs>
 
       {toCenters.map((targetY, i) => {
-        const topY    = fromCenters[i * 2]     ?? targetY;
+        const topY = fromCenters[i * 2] ?? targetY;
         const bottomY = fromCenters[i * 2 + 1] ?? topY;
-        const midY    = (topY + bottomY) / 2;
+        const midY = (topY + bottomY) / 2;
 
-        const ty  = topY    + HEADER_H;
-        const by  = bottomY + HEADER_H;
-        const my  = midY    + HEADER_H;
+        const ty = topY + HEADER_H;
+        const by = bottomY + HEADER_H;
+        const my = midY + HEADER_H;
         const tgy = targetY + HEADER_H;
 
         return (
@@ -657,6 +669,32 @@ export const PlayoffsBracket: React.FC<PlayoffsBracketProps> = ({
     return finals[0] ?? null;
   }, [orderedRoundMap]);
 
+  const thirdPlaceMatch = useMemo((): { bracketMatch: BracketMatch; linked?: Match } | null => {
+    const fromMatches = matches.find(m => normalizeRound(m.fase) === 'TERCER_PUESTO');
+    if (fromMatches) {
+      return {
+        bracketMatch: {
+          cruce_id: fromMatches.id_partido,
+          ronda: 'TERCER_PUESTO',
+          equipo_1_id: fromMatches.local_id || '',
+          equipo_2_id: fromMatches.visita_id || '',
+          ganador_id: getMatchWinnerId(fromMatches),
+          siguiente_cruce_id: '',
+        },
+        linked: fromMatches,
+      };
+    }
+    const fromBracket = bracket.find(b => normalizeRound(b.ronda) === 'TERCER_PUESTO');
+    if (fromBracket) {
+      const linked =
+        matchesMap.get(fromBracket.cruce_id) ||
+        matchesMap.get(`${fromBracket.equipo_1_id}_${fromBracket.equipo_2_id}`) ||
+        matchesMap.get(`${fromBracket.equipo_2_id}_${fromBracket.equipo_1_id}`);
+      return { bracketMatch: fromBracket, linked };
+    }
+    return null;
+  }, [matches, bracket, matchesMap]);
+
   const champion = useMemo(
     () => (finalMatch?.ganador_id ? teamsMap.get(finalMatch.ganador_id) ?? null : null),
     [finalMatch, teamsMap]
@@ -698,7 +736,7 @@ export const PlayoffsBracket: React.FC<PlayoffsBracketProps> = ({
         const tLoc = teamsMap.get(m.local_id);
         const tVis = teamsMap.get(m.visita_id);
         return (tLoc?.grupo || '').toUpperCase() === gUpper ||
-               (tVis?.grupo || '').toUpperCase() === gUpper;
+          (tVis?.grupo || '').toUpperCase() === gUpper;
       });
 
       const gTotal = gMatches.length;
@@ -764,11 +802,10 @@ export const PlayoffsBracket: React.FC<PlayoffsBracketProps> = ({
                   ? 'Equipos Clasificados a Eliminatorias'
                   : 'Clasificación a Eliminatorias'}
               </span>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
-                isGroupStageFullyFinished
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${isGroupStageFullyFinished
                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                   : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-              }`}>
+                }`}>
                 {isGroupStageFullyFinished
                   ? 'Fase de Grupos Concluida'
                   : `Fase de Grupos en Disputa (${finishedGroupMatches}/${totalGroupMatches} PJ)`}
@@ -880,12 +917,12 @@ export const PlayoffsBracket: React.FC<PlayoffsBracketProps> = ({
               >
                 {activeRounds.map((round, ri) => {
                   const matchesOfRound = orderedRoundMap.get(round) ?? [];
-                  const centers        = centersByRound.get(round) ?? [];
-                  const isFinal        = round === 'FINAL';
-                  const theme          = ROUND_THEMES[round] ?? ROUND_THEMES['CUARTOS'];
-                  const nextRound      = activeRounds[ri + 1];
-                  const nextCenters    = nextRound ? (centersByRound.get(nextRound) ?? []) : [];
-                  const connColor      = theme.connColor;
+                  const centers = centersByRound.get(round) ?? [];
+                  const isFinal = round === 'FINAL';
+                  const theme = ROUND_THEMES[round] ?? ROUND_THEMES['CUARTOS'];
+                  const nextRound = activeRounds[ri + 1];
+                  const nextCenters = nextRound ? (centersByRound.get(nextRound) ?? []) : [];
+                  const connColor = theme.connColor;
 
                   return (
                     <React.Fragment key={round}>
@@ -951,6 +988,32 @@ export const PlayoffsBracket: React.FC<PlayoffsBracketProps> = ({
               </div>
             </div>
           </div>
+
+          {/* ── Partido Opcional por el 3.º y 4.º Puesto ── */}
+          {thirdPlaceMatch && (
+            <div className="mt-6 rounded-3xl glass-panel border border-orange-500/30 p-5 sm:p-6 bg-gradient-to-r from-orange-950/20 via-slate-950/80 to-slate-950/80 shadow-xl flex flex-col md:flex-row items-center justify-between gap-5">
+              <div className="text-center md:text-left">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-400 text-xs font-black uppercase tracking-wider mb-1.5">
+                  <Trophy className="w-3.5 h-3.5 text-orange-400" />
+                  <span>Definición de Podio</span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-black text-white">
+                  Partido por el 3.º y 4.º Puesto
+                </h3>
+                <p className="text-xs text-slate-400 mt-1 max-w-md">
+                  Encuentro especial entre los semifinalistas para definir el tercer y cuarto lugar del torneo.
+                </p>
+              </div>
+              <div className="w-full max-w-[310px]" style={{ height: MATCH_H }}>
+                <TreeCard
+                  bracketMatch={thirdPlaceMatch.bracketMatch}
+                  teamsMap={teamsMap}
+                  linkedMatch={thirdPlaceMatch.linked}
+                  isFinal={false}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Leyenda y Consejos */}
           <div className="flex items-center justify-between gap-4 mt-4 flex-wrap text-xs text-slate-400 px-2">

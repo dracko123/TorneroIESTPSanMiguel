@@ -4,6 +4,7 @@ import { SportsHeroBanner } from './components/SportsHeroBanner';
 import { LiveMatches } from './components/LiveMatches';
 import { GroupStandings } from './components/GroupStandings';
 import { PlayoffsBracket } from './components/PlayoffsBracket';
+import { PlayerStatsSection } from './components/PlayerStatsSection';
 import { CommercialFooter } from './components/CommercialFooter';
 import { WhatsAppFloatButton } from './components/WhatsAppFloatButton';
 import { LoadingScreen } from './components/LoadingScreen';
@@ -64,6 +65,12 @@ export function App() {
           teams={data.teams || []}
           matches={data.matches || []}
           config={data.config}
+        />
+
+        {/* Sección de Goleadores y Registro Disciplinario (Auto-oculta si no hay jugadores) */}
+        <PlayerStatsSection
+          players={data.players || []}
+          teams={data.teams || []}
         />
       </main>
 
