@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import type { Match, Team } from '../types/tournament';
+import type { Match, Player, Team } from '../types/tournament';
 import { MatchCard } from './MatchCard';
 import { Calendar, CheckCircle, Radio, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
@@ -35,9 +35,10 @@ function formatDateKeyLabel(dateKey: string): string {
 interface LiveMatchesProps {
   matches: Match[];
   teams: Team[];
+  players?: Player[];
 }
 
-export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
+export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams, players = [] }) => {
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'LIVE' | 'SCHEDULED' | 'FINISHED'>('LIVE');
   const [phaseFilter, setPhaseFilter] = useState<string>('ALL');
   const [dateFilter, setDateFilter] = useState<string>('ALL');
@@ -452,7 +453,7 @@ export const LiveMatches: React.FC<LiveMatchesProps> = ({ matches, teams }) => {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {paginatedMatches.map(match => (
-              <MatchCard key={match.id_partido} match={match} teamsMap={teamsMap} />
+              <MatchCard key={match.id_partido} match={match} teamsMap={teamsMap} players={players} />
             ))}
           </div>
 

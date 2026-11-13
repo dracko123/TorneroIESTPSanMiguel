@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { MapPin, User, Calendar, Trophy, XCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
-import type { Match, MatchEventItem, Team } from '../types/tournament';
+import { MapPin, User, Calendar, Trophy, XCircle, AlertTriangle, ChevronDown, ChevronUp, ShieldAlert } from 'lucide-react';
+import type { Match, MatchEventItem, Player, Team } from '../types/tournament';
 import { TeamBadge } from './TeamBadge';
 
 interface MatchCardProps {
   match: Match;
   teamsMap: Map<string, Team>;
+  players?: Player[];
 }
 
-export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
+export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap, players = [] }) => {
   const [showDetails, setShowDetails] = useState(false);
 
   const parsedEvents = useMemo<MatchEventItem[]>(() => {
@@ -25,11 +26,37 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
     return [];
   }, [match.eventos_partido]);
 
-  const yellowL = Number(match.tarjetas_amarillas_local) || 0;
-  const redL = Number(match.tarjetas_rojas_local) || 0;
-  const yellowV = Number(match.tarjetas_amarillas_visita) || 0;
-  const redV = Number(match.tarjetas_rojas_visita) || 0;
+  const eventCards = useMemo(() => {
+    let yL = 0, rL = 0, yV = 0, rV = 0;
+    parsedEvents.forEach(ev => {
+      const eqId = ev.id_equipo || ev.equipo || '';
+      const isLoc = eqId === match.local_id || eqId === 'A';
+      if (ev.tipo === 'AMARILLA') {
+        if (isLoc) yL++; else yV++;
+      } else if (ev.tipo === 'ROJA_ACUMULADA') {
+        if (isLoc) { yL++; rL++; } else { yV++; rV++; }
+      } else if (ev.tipo === 'ROJA_DIRECTA' || ev.tipo === 'ROJA') {
+        if (isLoc) rL++; else rV++;
+      }
+    });
+    return { yL, rL, yV, rV };
+  }, [parsedEvents, match.local_id]);
+
+  const yellowL = Math.max(Number(match.tarjetas_amarillas_local) || 0, eventCards.yL);
+  const redL = Math.max(Number(match.tarjetas_rojas_local) || 0, eventCards.rL);
+  const yellowV = Math.max(Number(match.tarjetas_amarillas_visita) || 0, eventCards.yV);
+  const redV = Math.max(Number(match.tarjetas_rojas_visita) || 0, eventCards.rV);
   const hasCardCounters = yellowL > 0 || redL > 0 || yellowV > 0 || redV > 0;
+
+  // Jugadores suspendidos de ambos equipos (para mostrar alerta en partidos PROGRAMADO o EN_VIVO)
+  const suspendedMatchPlayers = useMemo(() => {
+    if (match.estado === 'FINALIZADO' || !players || players.length === 0) return [];
+    return players.filter(p => {
+      const isTeamInMatch = p.id_equipo === match.local_id || p.id_equipo === match.visita_id;
+      const isSusp = String(p.estado_disciplinario || '').toUpperCase().startsWith('SUSPENDIDO');
+      return isTeamInMatch && isSusp;
+    });
+  }, [players, match.local_id, match.visita_id, match.estado]);
   const localTeam = teamsMap.get(match.local_id) || {
     id_equipo: match.local_id,
     nombre: match.local_id || 'Equipo Local',
@@ -343,6 +370,32 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
         </div>
       )}
 
+      {/* Alerta de Jugadores Suspendidos para este encuentro (solo en Por Jugar o En Vivo) */}
+      {suspendedMatchPlayers.length > 0 && (
+        <div className="mb-3 p-2.5 rounded-xl bg-rose-950/30 border border-rose-500/30 space-y-1">
+          <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-rose-400">
+            <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+            <span>Jugadores Suspendidos ({suspendedMatchPlayers.length})</span>
+          </div>
+          {suspendedMatchPlayers.map(sp => {
+            const isLoc = sp.id_equipo === match.local_id;
+            const tName = isLoc ? localTeam.nombre : visitorTeam.nombre;
+            const rawEst = String(sp.estado_disciplinario || '');
+            const motivo = rawEst.includes(':') ? rawEst.split(':').slice(1).join(':').trim() : 'Suspendido';
+            return (
+              <div key={sp.id_jugador} className="text-[10.5px] text-rose-200 flex items-center justify-between gap-2">
+                <span className="truncate font-semibold">
+                  ⛔ #{sp.dorsal} {sp.apelativo || sp.nombres_apellidos} <span className="text-slate-400 font-normal">({tName})</span>
+                </span>
+                <span className="text-[9.5px] text-rose-300/90 bg-rose-500/15 px-1.5 py-0.5 rounded border border-rose-500/25 shrink-0">
+                  {motivo}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Detalle desplegable de Eventos (Goles, Tarjetas y Cambios por jugador - oculto si no hay eventos) */}
       {parsedEvents.length > 0 && (
         <div className="mb-3">
@@ -370,12 +423,18 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
                 } else if (ev.tipo === 'ROJA_ACUMULADA') {
                   badge = '🟨🟥 Roja (2ª Amarilla)';
                   badgeColor = 'text-rose-400';
-                } else if (ev.tipo === 'ROJA_DIRECTA') {
+                } else if (ev.tipo === 'ROJA_DIRECTA' || ev.tipo === 'ROJA') {
                   badge = '🟥 Roja Directa';
                   badgeColor = 'text-rose-400';
                 } else if (ev.tipo === 'CAMBIO') {
                   badge = '🔄 Cambio';
                   badgeColor = 'text-sky-300';
+                } else if (ev.tipo === 'INGRESO') {
+                  badge = '➕ Ingreso al campo';
+                  badgeColor = 'text-teal-300';
+                } else if (ev.tipo === 'SALIDA') {
+                  badge = '➖ Salida del campo';
+                  badgeColor = 'text-orange-300';
                 }
 
                 return (
@@ -387,6 +446,10 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, teamsMap }) => {
                       <span className="text-slate-200">
                         {ev.tipo === 'CAMBIO'
                           ? `Sale #${ev.dorsal_sale ?? ''} ${ev.nombre_sale || ''} ↔ Entra #${ev.dorsal_entra ?? ''} ${ev.nombre_entra || ''}`
+                          : ev.tipo === 'INGRESO'
+                          ? `Entra #${ev.dorsal_entra ?? ev.dorsal ?? ''} ${ev.nombre_entra || ev.nombre || ''}`
+                          : ev.tipo === 'SALIDA'
+                          ? `Sale #${ev.dorsal_sale ?? ev.dorsal ?? ''} ${ev.nombre_sale || ev.nombre || ''}`
                           : `#${ev.dorsal ?? ''} ${ev.nombre || ''}`}
                       </span>
                     </div>

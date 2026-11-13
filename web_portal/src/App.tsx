@@ -44,6 +44,7 @@ export function App() {
         <LiveMatches
           matches={data.matches || []}
           teams={data.teams || []}
+          players={data.players || []}
         />
 
         {/* Sección de Tabla de Posiciones por Grupos */}

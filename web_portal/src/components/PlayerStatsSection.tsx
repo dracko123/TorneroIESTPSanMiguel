@@ -20,6 +20,14 @@ export const PlayerStatsSection: React.FC<PlayerStatsSectionProps> = ({ players,
   const getPlayerGoals = (p: Player) => Number(p.goles_totales ?? p.goles ?? 0);
   const getPlayerYellows = (p: Player) => Number(p.amarillas_totales ?? p.amarillas_total ?? 0);
   const getPlayerReds = (p: Player) => Number(p.rojas_totales ?? p.rojas_total ?? 0);
+  const isPlayerSuspended = (p: Player) =>
+    String(p.estado_disciplinario || '').toUpperCase().startsWith('SUSPENDIDO');
+  const getSuspensionReason = (p: Player) => {
+    if (p.motivo_suspension) return p.motivo_suspension;
+    const raw = String(p.estado_disciplinario || '');
+    if (raw.includes(':')) return raw.split(':').slice(1).join(':').trim();
+    return '';
+  };
 
   const topScorers = useMemo(() => {
     return [...players]
@@ -31,13 +39,13 @@ export const PlayerStatsSection: React.FC<PlayerStatsSectionProps> = ({ players,
     return [...players]
       .filter(
         p =>
-          p.estado_disciplinario === 'SUSPENDIDO' ||
+          isPlayerSuspended(p) ||
           getPlayerReds(p) > 0 ||
           getPlayerYellows(p) > 0
       )
       .sort((a, b) => {
-        const aSusp = a.estado_disciplinario === 'SUSPENDIDO' ? 1 : 0;
-        const bSusp = b.estado_disciplinario === 'SUSPENDIDO' ? 1 : 0;
+        const aSusp = isPlayerSuspended(a) ? 1 : 0;
+        const bSusp = isPlayerSuspended(b) ? 1 : 0;
         if (bSusp !== aSusp) return bSusp - aSusp;
         if (getPlayerReds(b) !== getPlayerReds(a)) {
           return getPlayerReds(b) - getPlayerReds(a);
@@ -183,7 +191,8 @@ export const PlayerStatsSection: React.FC<PlayerStatsSectionProps> = ({ players,
             <div className="divide-y divide-white/5">
               {disciplinaryPlayers.map(player => {
                 const team = teamsMap.get(player.id_equipo);
-                const isSuspended = player.estado_disciplinario === 'SUSPENDIDO';
+                const isSuspended = isPlayerSuspended(player);
+                const suspensionReason = getSuspensionReason(player);
                 let phaseHistory: Record<string, any> = {};
                 try {
                   if (player.historial_fases_json) {
@@ -218,26 +227,32 @@ export const PlayerStatsSection: React.FC<PlayerStatsSectionProps> = ({ players,
                           <span className="text-sm font-bold text-white truncate">
                             {player.apelativo ? `${player.apelativo} (${player.nombres_apellidos})` : player.nombres_apellidos}
                           </span>
-                          {isSuspended && (
+                          {isSuspended ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse">
                               ⛔ SUSPENDIDO ({player.partidos_suspendido_restantes || 1} PJ)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                              ✓ HABILITADO
                             </span>
                           )}
                         </div>
                         <p className="text-[11px] text-slate-400 truncate mt-0.5">
                           {team?.nombre || player.id_equipo}
-                          {player.motivo_suspension ? ` • Motivo: ${player.motivo_suspension}` : ''}
+                          {suspensionReason ? ` • Motivo: ${suspensionReason}` : ''}
                         </p>
                         {phaseKeys.length > 0 && (
                           <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
                             {phaseKeys.map(pk => {
                               const ph = phaseHistory[pk] || {};
+                              const cumplidos = Array.isArray(ph.partidos_cumplidos) ? ph.partidos_cumplidos.length : 0;
                               return (
                                 <span
                                   key={pk}
                                   className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-slate-900/90 border border-white/10 text-slate-300"
                                 >
                                   {pk}: {ph.amarillas || 0}🟨 {ph.rojas || 0}🟥
+                                  {cumplidos > 0 ? ` (✓ ${cumplidos} cumpl.)` : ''}
                                 </span>
                               );
                             })}
